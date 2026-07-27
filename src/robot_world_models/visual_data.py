@@ -30,7 +30,12 @@ def file_sha256(path: Path) -> str:
     return digest.hexdigest()
 
 
-def decode_video(path: Path) -> Iterator[np.ndarray]:
+def decode_video(
+    path: Path,
+    *,
+    start_seconds: float = 0.0,
+    frame_count: int | None = None,
+) -> Iterator[np.ndarray]:
     try:
         import av
     except ImportError as error:
@@ -41,8 +46,25 @@ def decode_video(path: Path) -> Iterator[np.ndarray]:
     with av.open(str(path)) as container:
         stream = container.streams.video[0]
         stream.thread_type = "AUTO"
+        if start_seconds > 0:
+            target_pts = int(start_seconds / float(stream.time_base))
+            container.seek(target_pts, stream=stream, any_frame=False, backward=True)
+        emitted = 0
+        tolerance = 0.5 / float(stream.average_rate)
         for frame in container.decode(stream):
+            timestamp = (
+                float(frame.pts * stream.time_base) if frame.pts is not None else None
+            )
+            if start_seconds > 0 and timestamp is None:
+                raise VisualDataError(
+                    f"segmented video frame has no timestamp: {path}"
+                )
+            if timestamp is not None and timestamp + tolerance < start_seconds:
+                continue
             yield frame.to_ndarray(format="rgb24")
+            emitted += 1
+            if frame_count is not None and emitted == frame_count:
+                return
 
 
 class DinoV2FeatureEncoder:
@@ -158,6 +180,8 @@ def cache_visual_episode(
     *,
     episode_id: str,
     video_path: Path,
+    video_start_seconds: float = 0.0,
+    video_frame_count: int | None = None,
     states: np.ndarray,
     actions: np.ndarray,
     encoder: DinoV2FeatureEncoder,
@@ -165,7 +189,11 @@ def cache_visual_episode(
     output_size: int,
     cache_path: Path,
 ) -> dict[str, object]:
-    cache_contract = encoder.cache_contract(output_size=output_size)
+    cache_contract = {
+        **encoder.cache_contract(output_size=output_size),
+        "videoStartSeconds": video_start_seconds,
+        "videoFrameCount": video_frame_count,
+    }
     cache_contract_json = json.dumps(cache_contract, sort_keys=True, separators=(",", ":"))
     if cache_path.exists():
         with np.load(cache_path) as cached:
@@ -177,7 +205,7 @@ def cache_visual_episode(
                 else None
             )
             if (
-                cache_version == 3
+                cache_version == 4
                 and cached_contract == cache_contract_json
                 and frame_count != len(states)
             ):
@@ -185,7 +213,7 @@ def cache_visual_episode(
                     f"stale feature cache for episode {episode_id}: "
                     f"{frame_count} frames != {len(states)} states"
                 )
-        if cache_version == 3 and cached_contract == cache_contract_json:
+        if cache_version == 4 and cached_contract == cache_contract_json:
             return {
                 "episodeId": episode_id,
                 "path": str(cache_path),
@@ -199,7 +227,11 @@ def cache_visual_episode(
     target_batches: list[np.ndarray] = []
     pending: list[np.ndarray] = []
     decoded_count = 0
-    for frame in decode_video(video_path):
+    for frame in decode_video(
+        video_path,
+        start_seconds=video_start_seconds,
+        frame_count=video_frame_count,
+    ):
         decoded_count += 1
         pending.append(frame)
         if len(pending) == encoder_batch_size:
@@ -227,7 +259,7 @@ def cache_visual_episode(
     cache_path.parent.mkdir(parents=True, exist_ok=True)
     np.savez(
         cache_path,
-        cache_version=np.asarray(3),
+        cache_version=np.asarray(4),
         cache_contract_json=np.asarray(cache_contract_json),
         features=features,
         frames=frames,
@@ -240,7 +272,7 @@ def cache_visual_episode(
         "frames": decoded_count,
         "featuresShape": list(features.shape),
         "framesShape": list(frames.shape),
-        "cacheVersion": 3,
+        "cacheVersion": 4,
         "cacheContract": cache_contract,
         "rgbTargetTransform": "exact DINOv2 processor view, denormalized then resized",
         "bytes": cache_path.stat().st_size,

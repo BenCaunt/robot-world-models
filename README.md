@@ -24,7 +24,8 @@ The first local spike is executable and provides:
 - validated dataset, robot, dataset-to-robot mapping, and recipe manifests;
 - a generated machine-readable catalog;
 - live, Arc-aware discovery across both WarmHub registries;
-- reusable Hugging Face, LeRobot v2.1, and GitHub description adapters;
+- reusable Hugging Face, LeRobot v2.1, nested LeRobot v3, and GitHub description adapters;
+- manifest-selected collection members and fail-closed download-byte ceilings;
 - SO-101 state and DINOv2 visual-latent proof-of-concept trainers for MPS, CUDA, and CPU;
 - selectable tokenwise-MLP and spatial-transformer visual predictors with controlled H1/H5 recipe
   contracts;
@@ -64,6 +65,15 @@ open-loop rollout work; use `so101-dinov2-visual-poc` when one-step fidelity is 
 uv sync --extra train --extra lerobot --extra vision
 uv run rwm train so101-dinov2-visual-h5-poc --run-dir runs/so101-visual
 uv run rerun runs/so101-visual/evaluation.rrd
+```
+
+Run the bounded nested-collection proof. It fetches 65.18 MB of a 10.94 GB upstream repository and
+fails before transfer if the reviewed 75 MB ceiling would be exceeded:
+
+```bash
+uv run rwm train project-ira-so101-dinov2-visual-poc \
+  --run-dir runs/project-ira-so101-visual-poc
+uv run rerun runs/project-ira-so101-visual-poc/evaluation.rrd
 ```
 
 Start an agent with [`prompts/create-world-model.md`](prompts/create-world-model.md). The agent
@@ -119,13 +129,20 @@ ablation gap was only 0.61%, versus 20.2% for the MLP control. It is retained as
 negative architecture ablation, not promoted as the default. See
 [`docs/spikes/so101-visual-transformer-ablation-2026-07-27.md`](docs/spikes/so101-visual-transformer-ablation-2026-07-27.md).
 
+The first data-side expansion then qualified Project IRA's 10.94 GB nested SO-101 Lego collection
+without bulk-ingesting it into WarmHub. A 12-episode, 65.18 MB desk-view slice ran end to end through
+the new LeRobot v3 adapter. It beat persistence by 60.3% and retained a 16.8% mean-action ablation
+gap, but did not improve on the earlier control's 20.2% relative action gap. See
+[`docs/spikes/project-ira-so101-visual-2026-07-27.md`](docs/spikes/project-ira-so101-visual-2026-07-27.md).
+
 ## Status
 
 WarmHub resolution, bounded state-data materialization, local training, checkpointing, baseline
 evaluation, one-camera visual-latent training, cached DINOv2 features, and actual/predicted Rerun
 images plus five-joint URDF animation are implemented. Controlled representation ablation and
-five-step visual training are also implemented. The spatial-transformer path is implemented and
-tested, but remains experimental because its tiny-data run mostly ignored action. Task-relevant
-visual metrics, sharper reconstruction, more action-diverse data, the SO-101 gripper transform,
-and paid RunPod provisioning remain future milestones. The RunPod CLI remains intentionally
-plan-only.
+five-step visual training are also implemented. Nested LeRobot v3 collections can select exact
+members, slice shared video by episode, and enforce a pre-download byte ceiling. The
+spatial-transformer path is implemented and tested, but remains experimental because its tiny-data
+run mostly ignored action. Source-held-out visual evaluation, task-relevant metrics, sharper
+reconstruction, the SO-101 gripper transform, and paid RunPod provisioning remain future
+milestones. The RunPod CLI remains intentionally plan-only.

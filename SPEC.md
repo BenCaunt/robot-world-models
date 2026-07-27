@@ -1,6 +1,6 @@
 # Robot World Models Specification
 
-Status: draft v0.5 — bounded SO-101 state, visual-latent, rollout, and architecture spikes implemented
+Status: draft v0.6 — bounded SO-101 state, visual, architecture, and nested-collection spikes implemented
 
 ## 1. Purpose
 
@@ -166,6 +166,12 @@ transport independent from schema while ensuring a state-only spike does not dow
 or unselected episodes. Storage versions are explicit capabilities: an installed library rejecting
 an older dataset does not require an upstream conversion when a bounded, tested adapter can read
 the immutable format directly.
+
+Collection datasets declare their complete reviewed member set and exclusions in the dataset
+manifest. Recipes select exact members and a fail-closed byte ceiling. When a format stores many
+episodes in one Parquet or video chunk, the format adapter owns episode slicing and alignment; the
+source adapter still transfers only the approved chunks. WarmHub stores the aggregate facts and
+relationships, never those chunks.
 
 For a new dataset, the normal contribution is a manifest, fixture, and contract test. A new source
 adapter is justified only by a new transport or authentication method; a new format adapter is

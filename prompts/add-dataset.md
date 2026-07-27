@@ -9,16 +9,20 @@ Add support for a robot-learning dataset without creating one-off download or ex
    do not present provisional fields as registry facts.
 4. Compare its transport with existing source adapters and its layout with existing format adapters.
 5. Preflight the exact upstream revision, access/gating state, required metadata, episode payload
-   paths, and estimated bytes. If access fails, return to discovery instead of bypassing WarmHub.
+   paths, and estimated bytes. Distinguish total repository bytes from the exact approved transfer.
+   If access fails, return to discovery instead of bypassing WarmHub.
 6. Prefer a dataset manifest using existing adapters.
 7. Add a new source adapter only for a genuinely new protocol or authentication method.
 8. Add a new format adapter only for a genuinely new storage or episode schema/version. Do not
    force an upstream conversion merely because the installed training library dropped an old format.
-9. Add the smallest license-safe fixture that exercises metadata, one episode boundary, timestamps,
+9. If the repository is a collection, declare its complete reviewed member set, exclusions, and
+   selection evidence. Put the experiment's exact member roots and fail-closed byte ceiling in the
+   recipe; do not write raw rows, videos, feature caches, or checkpoints to WarmHub.
+10. Add the smallest license-safe fixture that exercises metadata, one episode boundary, timestamps,
    modalities, and error handling.
-10. Add contract tests for canonical episode output, selective materialization, checksums, resume
+11. Add contract tests for canonical episode output, selective materialization, checksums, resume
     behavior, and malformed input.
-11. Run:
+12. Run:
 
     ```bash
     uv run rwm catalog validate

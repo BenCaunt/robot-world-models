@@ -1,0 +1,144 @@
+schema_version: 1
+kind: dataset
+id: project-ira-so101-lego
+display_name: Project IRA SO-101 Lego colour sorting
+warmhub:
+  repo: bencaunt/robot-datasets
+  wref: Dataset/huggingface/project-ira/tpsose2026-dataset-lego-lerobot-so101
+  observed_pinned_wref: Dataset/huggingface/project-ira/tpsose2026-dataset-lego-lerobot-so101@v4
+  attribution_url: https://app.warmhub.ai/orgs/bencaunt/repos/robot-datasets
+profile_wref: DatasetProfile/huggingface/project-ira/tpsose2026-dataset-lego-lerobot-so101
+license: cc-by-sa-4.0
+upstream_revision: ecffa007fe579f3b334548321c995225ff4d3df2
+source:
+  adapter: huggingface-hub
+  implementation_status: implemented
+  location_resolved_from_warmhub: true
+format:
+  adapter: lerobot-v3-nested
+  implementation_status: implemented
+  codebase_version: v3.0
+robot_evidence:
+  recorded_with_wref: RecordedWith/huggingface/project-ira/tpsose2026-dataset-lego-lerobot-so101
+  robot_wref: wh:bencaunt/robot-models/Robot/the-robot-studio/so-arm101
+  match_method: curated
+  confidence: 1.0
+  notes: The upstream title, README, feature schema, and so_follower robot_type identify SO-101.
+  requires_user_confirmation: false
+modalities:
+  - sensor/rgb
+  - sensor/proprioception
+  - state-space/joint-position
+  - action-space/joint-position
+  - action-space/gripper-command
+  - task/manipulation
+episode_schema:
+  fps: 30
+  total_episodes: 460
+  total_frames: 407233
+  state:
+    dimension: 6
+    names:
+      - shoulder_pan.pos
+      - shoulder_lift.pos
+      - elbow_flex.pos
+      - wrist_flex.pos
+      - wrist_roll.pos
+      - gripper.pos
+    units: LeRobot calibrated range -100 to 100 for arm joints; 0 to 100 for gripper
+  action:
+    dimension: 6
+    names:
+      - shoulder_pan.pos
+      - shoulder_lift.pos
+      - elbow_flex.pos
+      - wrist_flex.pos
+      - wrist_roll.pos
+      - gripper.pos
+    units: LeRobot calibrated range -100 to 100 for arm joints; 0 to 100 for gripper
+  cameras:
+    - observation.images.desk_view
+    - observation.images.wrist_left
+mixture:
+  embodiment: so-arm101
+  schema_family: lerobot-joint-position-6d
+  domain: physical-tabletop-lego-sorting
+  compatibility_tier: provisional-homogeneous
+required_assessments:
+  - source/listed
+  - meta/info-present
+  - meta/features-parse
+  - meta/robot-type-present
+  - license/present
+fixture: null
+collection:
+  layout: nested-lerobot-v3
+  members:
+    - 2026_06_03-20h21m_Sort_Lego_Color_multi_1
+    - 2026_06_03-20h21m_Sort_Lego_Color_multi_2
+    - 2026_06_03-20h21m_Sort_Lego_Color_multi_3
+    - 2026_06_03-20h21m_Sort_Lego_Color_multi_4
+    - 2026_06_03-20h21m_Sort_Lego_Color_multi_5
+    - 2026_06_11-19h48m_Sort_Lego_Color_red_1
+    - 2026_06_11-20h02m_Sort_Lego_Color_red_1
+    - 2026_06_11-20h12m_Sort_Lego_Color_red_1
+    - 2026_06_11-20h20m_Sort_Lego_Color_red_var_1
+    - 2026_06_11-20h28m_Sort_Lego_Color_red_var_1
+    - 2026_06_12-13h56m_Sort_Lego_Color_green_1
+    - 2026_06_12-14h04m_Sort_Lego_Color_green_1
+    - 2026_06_12-14h12m_Sort_Lego_Color_green_1
+    - 2026_06_12-14h19m_Sort_Lego_Color_green_var_1
+    - 2026_06_12-14h28m_Sort_Lego_Color_green_var_1
+    - 2026_06_12-14h37m_Sort_Lego_Color_yellow_1
+    - 2026_06_12-14h47m_Sort_Lego_Color_yellow_1
+    - 2026_06_12-14h56m_Sort_Lego_Color_yellow_1
+    - 2026_06_12-15h04m_Sort_Lego_Color_yellow_var_1
+    - 2026_06_12-15h13m_Sort_Lego_Color_yellow_var_1_merging_does_not_work
+    - 2026_06_12-15h22m_Sort_Lego_Color_blue_1
+    - 2026_06_12-15h29m_Sort_Lego_Color_blue_1
+    - 2026_06_12-15h34m_Sort_Lego_Color_blue_1
+    - 2026_06_12-15h41m_Sort_Lego_Color_blue_var_1
+    - 2026_06_12-15h49m_Sort_Lego_Color_blue_var_1
+    - 2026_06_12-16h03m_Sort_Lego_Color_multi_1
+    - 2026_06_12-16h14m_Sort_Lego_Color_multi_1
+    - 2026_06_12-16h26m_Sort_Lego_Color_multi_1
+    - 2026_06_12-16h37m_Sort_Lego_Color_multi_1_maybe_corrupt
+    - 2026_06_12-16h50m_Sort_Lego_Color_multi_1
+    - 2026_07_03-12h38m_Sort_Lego_Color_red_plate_1
+    - 2026_07_03-12h46m_Sort_Lego_Color_red_plate_1
+    - 2026_07_03-12h58m_Sort_Lego_Color_blue_plate_1
+    - 2026_07_03-13h09m_Sort_Lego_Color_blue_plate_1
+    - 2026_07_03-13h17m_Sort_Lego_Color_yellow_plate_1
+    - 2026_07_03-13h24m_Sort_Lego_Color_yellow_plate_1
+    - 2026_07_03-13h30m_Sort_Lego_Color_green_plate_1
+    - 2026_07_03-13h37m_Sort_Lego_Color_green_plate_1
+    - 2026_07_08-17h01m_Lego_Plate_ColorID_yellow_1
+    - 2026_07_08-17h20m_Lego_Plate_ColorID_yellow_1
+    - 2026_07_08-18h18m_Lego_Plate_ColorID_red_1
+    - 2026_07_08-18h34m_Lego_Plate_ColorID_red_1
+    - 2026_07_08-18h40m_Lego_Plate_ColorID_green_1
+    - 2026_07_08-18h45m_Lego_Plate_ColorID_green_1
+    - 2026_07_08-18h52m_Lego_Plate_ColorID_blue_1
+    - 2026_07_08-18h58m_Lego_Plate_ColorID_blue_1
+  excluded_members:
+    - 2026_06_03-20h21m_Sort_Lego_Color_1_redundant
+    - TPSoSe2026_Dataset_Lego_LeRobot_SO101_merged
+    - TPSoSe2026_Dataset_Lego_LeRobot_SO101_merged_V2
+  selection_evidence: >-
+    The README advertises 460 episodes. At the pinned revision, exactly 46 nonredundant raw member
+    roots contain ten episodes each. The redundant root adds 50 duplicate/extra episodes, and the
+    two merged roots contain only 290 and 300 episodes, so neither merged root represents the full
+    collection.
+storage:
+  upstream_bytes: 10943240337
+  warmhub_payload_bytes: 0
+  policy: metadata-in-warmhub-payload-upstream
+known_limitations:
+  - The Hugging Face repository is a nested collection, not one root-level LeRobot dataset.
+  - The upstream merged directories are incomplete and must not be treated as the 460-episode set.
+  - The complete upstream repository includes duplicate video payloads; recipes select exact raw
+    members and enforce a byte ceiling before download.
+  - No source-held-out test environment is declared, and the README reports uneven recovery
+    behavior.
+  - A minority of arm samples exceed the nominal -100 to 100 calibrated range; wrist-roll overflow
+    and robot-specific calibration need explicit evaluation.

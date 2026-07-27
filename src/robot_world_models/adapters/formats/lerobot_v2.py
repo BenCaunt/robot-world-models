@@ -66,6 +66,8 @@ class LeRobotV2Adapter:
         episode_indices: Sequence[int],
         cameras: Sequence[str] = (),
     ) -> list[str]:
+        if "meta/info.json" not in upstream_files:
+            raise LeRobotV2Error("preflight did not find meta/info.json")
         selected_names = {
             f"episode_{episode_index:06d}.parquet" for episode_index in episode_indices
         }

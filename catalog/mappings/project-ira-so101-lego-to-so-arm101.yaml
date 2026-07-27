@@ -1,0 +1,58 @@
+schema_version: 1
+kind: joint-mapping
+id: project-ira-so101-lego-to-so-arm101
+display_name: Project IRA SO-101 features to SO-ARM101 URDF joints
+dataset: project-ira-so101-lego
+robot: so-arm101
+mapping:
+  status: validated
+  coverage: partial
+  animate_in_rerun: true
+  dataset_units: LeRobot calibrated range -100 to 100 for arm joints; 0 to 100 for gripper
+  urdf_units: radians
+  out_of_range_policy: clamp
+  entries:
+    shoulder_pan.pos:
+      urdf_joint: "1"
+      scale: 0.019198621771937627
+      offset: 0.0
+      evidence:
+        - LeRobot's current SO-101 calibration normalizes arm joints to -100 through 100.
+        - The new-calibration URDF shoulder-pan limits are -110 through 110 degrees.
+    shoulder_lift.pos:
+      urdf_joint: "2"
+      scale: 0.017453292519943295
+      offset: 0.0
+      evidence:
+        - LeRobot's current SO-101 calibration normalizes arm joints to -100 through 100.
+        - The new-calibration URDF shoulder-lift limits are -100 through 100 degrees.
+    elbow_flex.pos:
+      urdf_joint: "3"
+      scale: 0.01658062789394613
+      offset: -0.08726646259971647
+      evidence:
+        - LeRobot's current SO-101 calibration normalizes arm joints to -100 through 100.
+        - The new-calibration URDF elbow limits are -100 through 90 degrees.
+    wrist_flex.pos:
+      urdf_joint: "4"
+      scale: 0.01658062789394613
+      offset: 0.0
+      evidence:
+        - LeRobot's current SO-101 calibration normalizes arm joints to -100 through 100.
+        - The new-calibration URDF wrist-flex limits are -95 through 95 degrees.
+    wrist_roll.pos:
+      urdf_joint: "5"
+      scale: 0.027925268031909273
+      offset: 0.0
+      evidence:
+        - LeRobot's current SO-101 calibration normalizes arm joints to -100 through 100.
+        - The new-calibration URDF wrist-roll limits are -160 through 160 degrees.
+  unmapped_features:
+    - gripper.pos
+  validation_required:
+    - derive and validate the LeRobot 0-100 gripper command to URDF jaw-angle transform
+known_limitations:
+  - The five arm-joint transforms linearly map LeRobot's calibrated range to the pinned
+    new-calibration URDF limits.
+  - Some selected raw values exceed -100 to 100 and are explicitly counted and clamped.
+  - The gripper stays at its URDF default because its 0-100 mapping is not represented in the URDF.

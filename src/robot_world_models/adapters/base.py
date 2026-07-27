@@ -29,6 +29,14 @@ class CanonicalEpisode:
     modality_mask: Mapping[str, bool]
 
 
+@dataclass(frozen=True)
+class VideoSegment:
+    path: Path
+    start_seconds: float
+    end_seconds: float
+    frame_count: int
+
+
 class SourceAdapter(Protocol):
     """Materialize immutable upstream bytes from a WarmHub-resolved location."""
 

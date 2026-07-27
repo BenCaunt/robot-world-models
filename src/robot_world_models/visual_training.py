@@ -7,7 +7,6 @@ from typing import TYPE_CHECKING, Any
 
 import numpy as np
 
-from robot_world_models.adapters.formats.lerobot_v2 import LeRobotV2Adapter
 from robot_world_models.adapters.sources.github import GitHubSparseCheckoutSource
 from robot_world_models.adapters.sources.huggingface import HuggingFaceDatasetSource
 from robot_world_models.catalog import manifest_by_id, repository_root
@@ -19,6 +18,7 @@ from robot_world_models.contracts import (
     RecipeManifest,
     RobotManifest,
 )
+from robot_world_models.dataset_loading import prepare_dataset
 from robot_world_models.devices import select_device
 from robot_world_models.eval.rerun_eval import write_state_evaluation
 from robot_world_models.training import (
@@ -759,30 +759,27 @@ def run_visual_recipe(
         revision=dataset_resolution["revision"],
     )
     _write_json(run_dir / "source-preflight.json", preflight)
-    episode_count = min(effective_episodes, dataset.episode_schema.total_episodes)
-    episode_indices = list(range(episode_count))
-    include_patterns = LeRobotV2Adapter.materialization_patterns(
-        [item["path"] for item in preflight["files"]],
-        episode_indices,
+    prepared = prepare_dataset(
+        dataset=dataset,
+        robot=robot,
+        subset=recipe.training.subset,
+        upstream_files=[item["path"] for item in preflight["files"]],
+        max_episodes=effective_episodes,
         cameras=[vision.camera],
     )
     source_receipt = dataset_source.fetch(
         location=dataset_resolution["repoId"],
         revision=dataset_resolution["revision"],
         destination=run_dir / "data" / dataset.id,
-        include_patterns=include_patterns,
+        include_patterns=prepared.include_patterns,
+        max_download_bytes=recipe.training.subset.max_download_bytes,
     )
     _write_json(
         run_dir / "data-receipt.json",
         HuggingFaceDatasetSource.receipt_dict(source_receipt),
     )
-    adapter = LeRobotV2Adapter(
-        dataset_wref=dataset.warmhub.wref,
-        robot_wref=robot.warmhub.wref,
-        episode_indices=episode_indices,
-    )
-    inspection = adapter.inspect(source_receipt)
-    episodes = list(adapter.episodes(source_receipt))
+    inspection = prepared.adapter.inspect(source_receipt)
+    episodes = list(prepared.adapter.episodes(source_receipt))
     by_id = {episode.episode_id: episode for episode in episodes}
     split = split_episode_ids(
         list(by_id),
@@ -803,14 +800,17 @@ def run_visual_recipe(
     cache_receipts = []
     for episode in episodes:
         episode_index = int(episode.episode_id)
+        video_segment = prepared.video_segment(
+            source_receipt,
+            camera=vision.camera,
+            episode=episode,
+        )
         cache_receipts.append(
             cache_visual_episode(
                 episode_id=episode.episode_id,
-                video_path=adapter.video_path(
-                    source_receipt,
-                    camera=vision.camera,
-                    episode_index=episode_index,
-                ),
+                video_path=video_segment.path,
+                video_start_seconds=video_segment.start_seconds,
+                video_frame_count=video_segment.frame_count,
                 states=np.asarray(episode.observations["state"], dtype=np.float32),
                 actions=np.asarray(episode.actions, dtype=np.float32),
                 encoder=encoder,

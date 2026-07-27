@@ -48,6 +48,8 @@ Do not skip directly from a robot name to architecture or paid compute.
 - If WarmHub lacks a fact, label a local mapping provisional and make the registry gap visible.
 - Before approving a dataset, preflight the exact upstream revision and required files. A WarmHub
   record is provenance evidence, not a guarantee that payload bytes remain public.
+- Keep bulk Parquet, video, feature caches, checkpoints, and recordings in the payload plane.
+  WarmHub receives compact identity, profile, relationship, QC, and provenance facts only.
 - Do not write to a WarmHub repo unless the user explicitly expands the task to ingestion.
 
 ## Contribution rules
@@ -61,6 +63,11 @@ A dataset normally adds a manifest, fixture, and contract test. Search for an ex
 
 Add code only when none applies. Keep adapters independent from recipes. A recipe composes
 capabilities; it does not own download or extraction logic.
+
+For a collection repository, the dataset manifest declares the complete reviewed member set and
+explicit exclusions. The recipe selects exact member roots and a fail-closed download-byte ceiling.
+Never treat a convenient merged directory as complete without reconciling its episode count and
+schema against the advertised source.
 
 Feature-name, unit, offset, and sign mappings belong to a dataset-to-robot manifest under
 `catalog/mappings/`. Never put a dataset-specific feature map on a global robot manifest.
@@ -86,6 +93,8 @@ Do not hand-edit `catalog/catalog.json` or files under `schemas/`.
 - Start with an overfit smoke test and a bounded subset.
 - Download only modalities and episodes required by the approved proof; state-only runs must not
   pull videos.
+- Report total upstream bytes, exact selected bytes, and estimated local cache bytes separately.
+  Enforce the approved transfer ceiling before the source adapter starts a download.
 - Select devices in order requested by the recipe; support `mps`, `cuda`, then `cpu`.
 - Record exact config, package lock hash, git commit, WarmHub snapshot, dataset fingerprint, device,
   seed, and checkpoint hash.

@@ -57,6 +57,33 @@
       "title": "DatasetMixtureLabels",
       "type": "object"
     },
+    "DatasetStoragePolicy": {
+      "additionalProperties": false,
+      "properties": {
+        "policy": {
+          "const": "metadata-in-warmhub-payload-upstream",
+          "title": "Policy",
+          "type": "string"
+        },
+        "upstream_bytes": {
+          "exclusiveMinimum": 0,
+          "title": "Upstream Bytes",
+          "type": "integer"
+        },
+        "warmhub_payload_bytes": {
+          "const": 0,
+          "title": "Warmhub Payload Bytes",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "upstream_bytes",
+        "warmhub_payload_bytes",
+        "policy"
+      ],
+      "title": "DatasetStoragePolicy",
+      "type": "object"
+    },
     "EpisodeSchema": {
       "additionalProperties": false,
       "properties": {
@@ -126,6 +153,42 @@
         "codebase_version"
       ],
       "title": "FormatRef",
+      "type": "object"
+    },
+    "NestedDatasetCollection": {
+      "additionalProperties": false,
+      "properties": {
+        "excluded_members": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Excluded Members",
+          "type": "array"
+        },
+        "layout": {
+          "const": "nested-lerobot-v3",
+          "title": "Layout",
+          "type": "string"
+        },
+        "members": {
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Members",
+          "type": "array"
+        },
+        "selection_evidence": {
+          "title": "Selection Evidence",
+          "type": "string"
+        }
+      },
+      "required": [
+        "layout",
+        "members",
+        "selection_evidence"
+      ],
+      "title": "NestedDatasetCollection",
       "type": "object"
     },
     "RobotEvidence": {
@@ -229,6 +292,17 @@
   },
   "additionalProperties": false,
   "properties": {
+    "collection": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/NestedDatasetCollection"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
     "display_name": {
       "title": "Display Name",
       "type": "string"
@@ -301,6 +375,17 @@
     },
     "source": {
       "$ref": "#/$defs/AdapterRef"
+    },
+    "storage": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/DatasetStoragePolicy"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
     },
     "upstream_revision": {
       "title": "Upstream Revision",

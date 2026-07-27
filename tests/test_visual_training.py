@@ -262,7 +262,7 @@ def test_feature_cache_uses_encoder_aligned_rgb_targets(tmp_path, monkeypatch) -
 
     monkeypatch.setattr(
         "robot_world_models.visual_data.decode_video",
-        lambda _: iter(source_frames),
+        lambda _, **__: iter(source_frames),
     )
     cache_path = tmp_path / "episode.npz"
     receipt = cache_visual_episode(
@@ -277,7 +277,7 @@ def test_feature_cache_uses_encoder_aligned_rgb_targets(tmp_path, monkeypatch) -
     )
 
     with np.load(cache_path) as cached:
-        assert int(cached["cache_version"]) == 3
+        assert int(cached["cache_version"]) == 4
         np.testing.assert_array_equal(cached["frames"], encoder_targets)
     assert receipt["rgbTargetTransform"].startswith("exact DINOv2")
 

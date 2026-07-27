@@ -93,6 +93,26 @@ def validate_repository(root: Path | None = None) -> list[tuple[Path, Manifest]]
                 raise CatalogError(f"{path}: joint mapping dataset is not in the recipe mixture")
             if mapping.robot != manifest.mixture.robot:
                 raise CatalogError(f"{path}: joint mapping robot does not match the recipe robot")
+        if len(manifest.mixture.datasets) == 1:
+            dataset = next(
+                item
+                for _, item in loaded
+                if isinstance(item, DatasetManifest)
+                and item.id == manifest.mixture.datasets[0]
+            )
+            selected_members = manifest.training.subset.member_roots
+            if selected_members and dataset.collection is None:
+                raise CatalogError(
+                    f"{path}: member_roots require a collection dataset"
+                )
+            if dataset.collection is not None:
+                unknown_members = sorted(
+                    set(selected_members) - set(dataset.collection.members)
+                )
+                if unknown_members:
+                    raise CatalogError(
+                        f"{path}: unknown collection members {unknown_members}"
+                    )
 
     return loaded
 

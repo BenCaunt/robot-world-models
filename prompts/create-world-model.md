@@ -16,9 +16,11 @@ large download before I approve the data plan.
    inferences, and unknowns.
 5. Recommend the smallest experiment that can test the idea. Show rejected datasets and why.
 6. Before download, preflight the exact upstream revision and required files. Catalog presence is
-   not proof that payload bytes are still public. After I approve the data plan, reuse existing
-   source and format adapters. If an adapter is missing, follow `prompts/add-dataset.md` and leave a
-   reusable contribution.
+   not proof that payload bytes are still public. Show total upstream bytes, exact selected bytes,
+   local cache estimates, and a fail-closed download ceiling. Keep bulk payloads upstream and
+   compact identity, profile, relationship, QC, and provenance facts in WarmHub. After I approve
+   the data plan, reuse existing source and format adapters. If an adapter is missing, follow
+   `prompts/add-dataset.md` and leave a reusable contribution.
 7. Train a bounded proof of concept locally with uv on MPS, CUDA, or CPU. Start with an overfit smoke
    test and compare against a naive baseline.
 8. For visual models, isolate representation changes from dynamics-objective changes. Establish a

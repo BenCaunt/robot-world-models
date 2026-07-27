@@ -4,6 +4,7 @@ import hashlib
 import os
 from collections.abc import Sequence
 from dataclasses import asdict
+from fnmatch import fnmatchcase
 from pathlib import Path
 from typing import Any
 
@@ -44,7 +45,13 @@ class HuggingFaceDatasetSource:
         # The token is only read by the Hub library and is never serialized into receipts.
         return None if os.environ.get("HF_TOKEN") else False
 
-    def preflight(self, *, location: str, revision: str) -> dict[str, Any]:
+    def preflight(
+        self,
+        *,
+        location: str,
+        revision: str,
+        required_files: Sequence[str] = (),
+    ) -> dict[str, Any]:
         try:
             from huggingface_hub import HfApi
         except ImportError as error:
@@ -68,13 +75,13 @@ class HuggingFaceDatasetSource:
             {"path": sibling.rfilename, "size": sibling.size}
             for sibling in info.siblings
         ]
-        required = {"meta/info.json", "meta/episodes.jsonl"}
+        unknown_size_files = [
+            item["path"] for item in files if item["size"] is None
+        ]
         listed = {item["path"] for item in files}
-        missing = sorted(required - listed)
+        missing = sorted(set(required_files) - listed)
         if missing:
             raise HuggingFaceSourceError(f"dataset is missing required files: {missing}")
-        if not any(path.startswith("data/") and path.endswith(".parquet") for path in listed):
-            raise HuggingFaceSourceError("dataset has no Parquet episode data")
         return {
             "repoId": location,
             "requestedRevision": revision,
@@ -82,8 +89,31 @@ class HuggingFaceDatasetSource:
             "private": info.private,
             "gated": info.gated,
             "fileCount": len(files),
+            "repositoryBytes": (
+                None
+                if unknown_size_files
+                else sum(int(item["size"]) for item in files)
+            ),
+            "unknownSizeFileCount": len(unknown_size_files),
             "files": files,
         }
+
+    @staticmethod
+    def estimate_download_bytes(
+        files: Sequence[dict[str, Any]],
+        include_patterns: Sequence[str],
+    ) -> int:
+        selected = [
+            item
+            for item in files
+            if any(fnmatchcase(item["path"], pattern) for pattern in include_patterns)
+        ]
+        unknown = [item["path"] for item in selected if item["size"] is None]
+        if unknown:
+            raise HuggingFaceSourceError(
+                f"cannot enforce a byte ceiling because sizes are missing: {unknown}"
+            )
+        return sum(int(item["size"]) for item in selected)
 
     def fetch(
         self,
@@ -92,6 +122,7 @@ class HuggingFaceDatasetSource:
         revision: str,
         destination: Path,
         include_patterns: Sequence[str] | None = None,
+        max_download_bytes: int | None = None,
     ) -> SourceReceipt:
         try:
             from huggingface_hub import snapshot_download
@@ -105,6 +136,13 @@ class HuggingFaceDatasetSource:
             raise HuggingFaceSourceError(
                 "upstream resolved a different commit than the WarmHub-pinned revision"
             )
+        patterns = list(include_patterns or ["meta/*", "data/*"])
+        expected_bytes = self.estimate_download_bytes(preflight["files"], patterns)
+        if max_download_bytes is not None and expected_bytes > max_download_bytes:
+            raise HuggingFaceSourceError(
+                "approved download ceiling exceeded: "
+                f"{expected_bytes} > {max_download_bytes} bytes"
+            )
         resumed = destination.exists() and any(_payload_files(destination))
         destination.mkdir(parents=True, exist_ok=True)
         try:
@@ -113,7 +151,7 @@ class HuggingFaceDatasetSource:
                 repo_type="dataset",
                 revision=revision,
                 local_dir=destination,
-                allow_patterns=list(include_patterns or ["meta/*", "data/*"]),
+                allow_patterns=patterns,
                 token=self._token_mode(),
             )
         except Exception as error:

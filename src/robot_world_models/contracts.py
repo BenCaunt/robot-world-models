@@ -106,6 +106,39 @@ class DatasetMixtureLabels(ContractModel):
     compatibility_tier: str
 
 
+class NestedDatasetCollection(ContractModel):
+    layout: Literal["nested-lerobot-v3"]
+    members: list[str] = Field(min_length=1)
+    excluded_members: list[str] = Field(default_factory=list)
+    selection_evidence: str
+
+    @model_validator(mode="after")
+    def validate_members(self) -> NestedDatasetCollection:
+        if len(set(self.members)) != len(self.members):
+            raise ValueError("collection members must be unique")
+        if len(set(self.excluded_members)) != len(self.excluded_members):
+            raise ValueError("excluded collection members must be unique")
+        overlap = set(self.members) & set(self.excluded_members)
+        if overlap:
+            raise ValueError(f"collection members cannot also be excluded: {sorted(overlap)}")
+        unsafe = [
+            member
+            for member in [*self.members, *self.excluded_members]
+            if member.startswith("/")
+            or not member
+            or any(part in {"", ".", ".."} for part in member.split("/"))
+        ]
+        if unsafe:
+            raise ValueError(f"collection member roots must be safe relative paths: {unsafe}")
+        return self
+
+
+class DatasetStoragePolicy(ContractModel):
+    upstream_bytes: int = Field(gt=0)
+    warmhub_payload_bytes: Literal[0]
+    policy: Literal["metadata-in-warmhub-payload-upstream"]
+
+
 class DatasetManifest(ManifestBase):
     kind: Literal["dataset"]
     warmhub: WarmHubRecord
@@ -120,6 +153,8 @@ class DatasetManifest(ManifestBase):
     mixture: DatasetMixtureLabels
     required_assessments: list[str]
     fixture: str | None
+    collection: NestedDatasetCollection | None = None
+    storage: DatasetStoragePolicy | None = None
 
 
 class RobotDescription(ContractModel):
@@ -269,6 +304,15 @@ class ModelContract(ContractModel):
 
 class TrainingSubset(ContractModel):
     max_episodes: int = Field(gt=0)
+    member_roots: list[str] = Field(default_factory=list)
+    max_download_bytes: int | None = Field(default=None, gt=0)
+
+    @field_validator("member_roots")
+    @classmethod
+    def validate_member_roots(cls, value: list[str]) -> list[str]:
+        if len(set(value)) != len(value):
+            raise ValueError("training subset member_roots must be unique")
+        return value
 
 
 class TrainingContract(ContractModel):

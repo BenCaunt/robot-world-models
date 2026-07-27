@@ -8,8 +8,12 @@ Contributions should leave a reusable capability behind instead of a one-off scr
 2. Add or update a manifest in `catalog/datasets/`.
 3. Reuse an existing `source.adapter` and `format.adapter` whenever possible.
 4. Add code only for a genuinely new source protocol or data layout.
-5. Add a bounded, redistributable fixture under `tests/fixtures/` when implementation code changes.
-6. Run:
+5. For collection repositories, declare the reviewed member set and exclusions in the dataset
+   manifest; put exact member selection and a byte ceiling in the recipe.
+6. Keep payload bytes upstream. WarmHub records compact discovery, profile, relationship, QC, and
+   provenance facts rather than dataset rows or media.
+7. Add a bounded, redistributable fixture under `tests/fixtures/` when implementation code changes.
+8. Run:
 
    ```bash
    uv run rwm catalog validate
@@ -39,4 +43,3 @@ A recipe must declare:
 
 Explain the reusable capability added, list registry facts used, and attach a small evaluation
 receipt. Do not commit datasets, model checkpoints, secrets, or `.rrd` files.
-

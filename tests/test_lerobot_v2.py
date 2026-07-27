@@ -6,9 +6,13 @@ from pathlib import Path
 import numpy as np
 import pyarrow as pa
 import pyarrow.parquet as pq
+import pytest
 
 from robot_world_models.adapters.base import SourceReceipt
-from robot_world_models.adapters.formats.lerobot_v2 import LeRobotV2Adapter
+from robot_world_models.adapters.formats.lerobot_v2 import (
+    LeRobotV2Adapter,
+    LeRobotV2Error,
+)
 
 
 def test_materialization_patterns_select_only_requested_episode_payloads() -> None:
@@ -22,6 +26,14 @@ def test_materialization_patterns_select_only_requested_episode_payloads() -> No
     patterns = LeRobotV2Adapter.materialization_patterns(files, [1])
 
     assert patterns == ["meta/*", "data/chunk-000/episode_000001.parquet"]
+
+
+def test_materialization_patterns_require_root_metadata() -> None:
+    with pytest.raises(LeRobotV2Error, match="meta/info.json"):
+        LeRobotV2Adapter.materialization_patterns(
+            ["data/chunk-000/episode_000000.parquet"],
+            [0],
+        )
 
 
 def test_materialization_patterns_include_only_selected_camera_payloads() -> None:

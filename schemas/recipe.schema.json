@@ -394,10 +394,30 @@
     "TrainingSubset": {
       "additionalProperties": false,
       "properties": {
+        "max_download_bytes": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Max Download Bytes"
+        },
         "max_episodes": {
           "exclusiveMinimum": 0,
           "title": "Max Episodes",
           "type": "integer"
+        },
+        "member_roots": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Member Roots",
+          "type": "array"
         }
       },
       "required": [

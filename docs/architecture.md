@@ -57,6 +57,12 @@ materialize immutable upstream paths, while format adapters own storage-version 
 canonical episode validation. LeRobot library compatibility is not used as a proxy for dataset
 storage compatibility.
 
+Nested collections make that boundary explicit. The dataset manifest records the complete,
+reviewed member set and exclusions; the recipe selects exact member roots and a download-byte
+ceiling. A LeRobot v3 format adapter splits shared Parquet and MP4 chunks back into canonical
+episodes using versioned episode metadata. WarmHub retains only compact facts and relationships;
+the source host retains every payload byte.
+
 The visual spike adds a third boundary: a visual-feature cache owns the relationship between one
 decoded camera frame, the frozen encoder's exact processed view, its spatial latent tokens, and the
 RGB reconstruction target. The dynamics model consumes that cache without importing a source or
