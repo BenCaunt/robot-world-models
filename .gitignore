@@ -1,0 +1,14 @@
+.DS_Store
+.env
+.env.*
+!.env.example
+.python-version.local
+.pytest_cache/
+.ruff_cache/
+.venv/
+__pycache__/
+*.py[cod]
+artifacts/
+data/
+runs/
+

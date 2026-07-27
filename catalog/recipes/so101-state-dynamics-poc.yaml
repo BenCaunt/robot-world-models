@@ -1,0 +1,80 @@
+schema_version: 1
+kind: recipe
+id: so101-state-dynamics-poc
+display_name: SO-101 action-conditioned state dynamics proof of concept
+intent:
+  prediction_target: next joint-state delta
+  horizon_steps: 1
+  purpose: validate the end-to-end data, training, checkpoint, device, and Rerun contracts
+mixture:
+  type: homogeneous
+  datasets:
+    - qb1t-so101-teleop-cubes
+  robot: so-arm101
+  sampling: episode-uniform
+  missing_modality_policy: reject-required
+  normalization: per-feature-training-split
+  split:
+    unit: episode
+    train_fraction: 0.8
+    validation_fraction: 0.1
+    test_fraction: 0.1
+modalities:
+  required:
+    - sensor/proprioception
+    - state-space/joint-position
+    - action-space/joint-position
+  optional:
+    - sensor/rgb
+model:
+  family: action-conditioned-state-dynamics
+  implementation: robot_world_models.models.state_dynamics:StateDynamicsMLP
+  state_dimension: 6
+  action_dimension: 6
+  hidden_dimension: 128
+  hidden_layers: 2
+training:
+  seed: 7
+  batch_size: 256
+  learning_rate: 0.001
+  max_steps: 2000
+  smoke_test_steps: 100
+  checkpoint_every_steps: 250
+  local_devices:
+    - mps
+    - cuda
+    - cpu
+  subset:
+    max_episodes: 10
+evaluation:
+  rerun_required: true
+  urdf_required: true
+  urdf_animation_requires_validated_joint_mapping: true
+  metrics:
+    - one_step_mse
+    - one_step_mae
+    - per_joint_mae
+    - rollout_mse_by_horizon
+    - joint_limit_violation_rate
+    - persistence_baseline_mse
+  rollout_horizons:
+    - 1
+    - 5
+    - 10
+remote_compute:
+  enabled: true
+  implementation_status: plan-only
+  provider: runpod
+  preferred_gpu: NVIDIA GeForce RTX 5090
+  gpu_count: 1
+  cloud_type: secure
+  max_hourly_usd: null
+  max_runtime_minutes: null
+  persistent_volume: false
+  public_service_ports: false
+  explicit_approval_required: true
+known_limitations:
+  - This state-only baseline is a pipeline proof, not the final visual world model.
+  - Source/format materialization and the trainer are the next implementation milestone.
+  - Remote provisioning is intentionally absent until teardown tests pass.
+

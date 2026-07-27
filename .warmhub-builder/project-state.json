@@ -1,0 +1,234 @@
+{
+  "schemaVersion": "warmhub-builder.project-state.v1",
+  "project": {
+    "idea": "An open-source agent-facing companion that discovers robot datasets and descriptions through WarmHub, trains a local proof-of-concept world model, evaluates it with Rerun, and can later scale an approved run to RunPod.",
+    "audience": "robotics practitioners and coding agents building world models for a specific robot",
+    "storyGoals": [
+      "treat bencaunt/robot-datasets and bencaunt/robot-models as co-equal sources",
+      "make homogeneous and heterogeneous dataset mixtures explicit and reviewable",
+      "produce a small local MPS or CUDA proof of concept before paid remote compute",
+      "make every evaluation inspectable in Rerun with a registry-resolved robot description",
+      "turn newly discovered datasets into reusable manifests and adapters"
+    ],
+    "constraints": [
+      "source discovery and provenance through WarmHub wherever registry coverage exists",
+      "upstream payload bytes remain at attributed sources",
+      "uv owns Python environments and lockfiles",
+      "Rerun output is mandatory for evaluation",
+      "no paid RunPod action without a cost-bounded plan and explicit approval",
+      "no secret values in prompts, files, command arguments, logs, or generated plans"
+    ],
+    "sensitivity": "public-safe",
+    "selectedShape": "display-on-existing-data"
+  },
+  "warmhubRepo": {
+    "repo": "bencaunt/robot-datasets",
+    "repoState": "existing",
+    "attributionUrl": "https://app.warmhub.ai/orgs/bencaunt/repos/robot-datasets"
+  },
+  "linkedWarmhubRepos": [
+    {
+      "repo": "bencaunt/robot-models",
+      "repoState": "existing",
+      "attributionUrl": "https://app.warmhub.ai/orgs/bencaunt/repos/robot-models",
+      "role": "robot identity, description, physical metadata, license, and QC"
+    }
+  ],
+  "repoDesignSummary": {
+    "shapeInventory": [
+      {
+        "name": "Dataset",
+        "kind": "thing",
+        "role": "durable external dataset identity"
+      },
+      {
+        "name": "DatasetModality",
+        "kind": "assertion",
+        "role": "directed Dataset to Modality relationship about an Arc"
+      },
+      {
+        "name": "RecordedWith",
+        "kind": "assertion",
+        "role": "dataset-to-cross-repo robot evidence"
+      },
+      {
+        "name": "Robot",
+        "kind": "thing",
+        "role": "durable robot platform identity"
+      },
+      {
+        "name": "Description",
+        "kind": "thing",
+        "role": "pinned URDF or MJCF source"
+      },
+      {
+        "name": "DescribesRobot",
+        "kind": "assertion",
+        "role": "directed Description to Robot relationship about an Arc"
+      }
+    ],
+    "identityModel": "Manifests retain durable unpinned wrefs and record observed pinned versions separately. Client comparisons normalize trailing @vN pins.",
+    "assertionModel": [
+      {
+        "shape": "DatasetModality",
+        "fact": "a Dataset has a normalized Modality",
+        "aboutCardinality": "arc",
+        "aboutTarget": "Arc[Dataset -> Modality]",
+        "fourDirection": {
+          "subject": "pass",
+          "object": "pass",
+          "aggregation": "pass",
+          "derivedRollup": "pass",
+          "notes": "Resolve collections and use role from for Dataset or role to for Modality."
+        },
+        "provenance": "assertion fields and WarmHub commit history",
+        "pitfallsChecked": [
+          "direction is preserved",
+          "legacy Pair is read-only compatibility and never emitted"
+        ]
+      },
+      {
+        "shape": "DescribesRobot",
+        "fact": "a Description describes a Robot",
+        "aboutCardinality": "arc",
+        "aboutTarget": "Arc[Description -> Robot]",
+        "fourDirection": {
+          "subject": "pass",
+          "object": "pass",
+          "aggregation": "pass",
+          "derivedRollup": "pass",
+          "notes": "Resolve collections and use role from for Description or role to for Robot."
+        },
+        "provenance": "match method, confidence, source index, and WarmHub commit history",
+        "pitfallsChecked": [
+          "direction is preserved",
+          "description and robot identity are not conflated"
+        ]
+      }
+    ],
+    "updateCadence": "read live registry state at discovery time and snapshot selected wrefs in each run receipt",
+    "writeModel": "read-only WarmHub consumer; contribution manifests are local Git artifacts",
+    "qcModel": "require relevant registry Assessments, license checks, adapter contracts, mixture compatibility checks, deterministic catalog generation, model metrics, and Rerun receipts",
+    "sensitivity": "public-safe"
+  },
+  "ingestion": {
+    "sources": [
+      {
+        "name": "bencaunt/robot-datasets",
+        "kind": "WarmHub repo",
+        "access": "wh CLI read path",
+        "mapsTo": [
+          "dataset manifests",
+          "modality compatibility",
+          "license and QC evidence"
+        ]
+      },
+      {
+        "name": "bencaunt/robot-models",
+        "kind": "WarmHub repo",
+        "access": "wh CLI read path",
+        "mapsTo": [
+          "robot manifests",
+          "pinned URDF/MJCF sources",
+          "model QC evidence"
+        ]
+      }
+    ],
+    "idempotency": "durable wref plus observed pinned version and upstream content revision",
+    "backfill": "not applicable to the read-only consumer",
+    "automation": [],
+    "status": "scaffolded"
+  },
+  "component": {
+    "installed": false,
+    "componentId": "",
+    "healthStatus": "not-needed",
+    "required": []
+  },
+  "collector": {
+    "needed": false,
+    "identityMode": "not-applicable",
+    "captureModes": [],
+    "offlineMode": "none",
+    "status": "not-needed"
+  },
+  "display": {
+    "needed": true,
+    "surface": "local training CLI plus Rerun recordings",
+    "demoUrl": "",
+    "sharingMode": "local-first",
+    "tokenBoundary": "WarmHub and RunPod tokens remain in local or host secret environments",
+    "sourceAttribution": [
+      "https://app.warmhub.ai/orgs/bencaunt/repos/robot-datasets",
+      "https://app.warmhub.ai/orgs/bencaunt/repos/robot-models"
+    ],
+    "status": "scaffolded"
+  },
+  "validationReceipts": [
+    {
+      "stage": "discovery",
+      "status": "pass",
+      "detail": "Live WarmHub reads found SO-ARM101, a pinned Apache-2.0 URDF description, and qb1t/so101_teleop_cubes with RGB, proprioception, joint-position state/actions, and passing source/license/schema assessments."
+    },
+    {
+      "stage": "external-interface-review",
+      "status": "pass",
+      "detail": "Official uv, Rerun, and RunPod documentation reviewed before writing commands and safety requirements."
+    },
+    {
+      "stage": "catalog-and-tests",
+      "status": "pass",
+      "detail": "uv lock resolved, three manifests validated, generated catalog and schemas were current, Ruff passed, and 9 tests passed."
+    },
+    {
+      "stage": "live-read-probe",
+      "status": "pass",
+      "detail": "uv run rwm warmhub discover SO-101 queried both first-class repos and returned current robot and dataset candidates."
+    },
+    {
+      "stage": "rerun-urdf-smoke",
+      "status": "pass",
+      "detail": "The Rerun evaluator loaded the pinned SO-101 URDF package, preserved the provisional joint-mapping guard, and wrote a 19,320,690-byte evaluation recording."
+    }
+  ],
+  "finalHandoff": {
+    "artifacts": [
+      "SPEC.md",
+      "AGENTS.md",
+      "catalog/catalog.json",
+      "catalog/datasets/qb1t-so101-teleop-cubes.yaml",
+      "catalog/robots/so-arm101.yaml",
+      "catalog/recipes/so101-state-dynamics-poc.yaml",
+      "prompts/create-world-model.md",
+      "prompts/add-dataset.md",
+      "prompts/runpod-gpu.md"
+    ],
+    "reproduceSteps": [
+      "uv sync",
+      "uv run rwm catalog validate",
+      "uv run rwm catalog build --check",
+      "uv run rwm warmhub discover SO-101",
+      "uv run ruff check .",
+      "uv run pytest"
+    ],
+    "demoUrls": [],
+    "caveats": [
+      "RunPod is plan-only until provisioning and teardown tests are implemented.",
+      "The first robot-dataset edge is alias-derived and requires user confirmation."
+    ],
+    "remainingHumanDecisions": [
+      "approve the first data mixture and modalities",
+      "approve implementation of paid RunPod provisioning after local proof of concept"
+    ]
+  },
+  "handoffs": [
+    {
+      "from": "warmhub-builder",
+      "to": "connect-warmhub-app",
+      "reason": "read-only training and evaluation tooling consumes two existing public WarmHub repos",
+      "manifestUpdated": ".warmhub-builder/project-state.json",
+      "capabilityFallbackUsed": "Python CLI shells out to the typed wh CLI because the public WarmHub SDK is TypeScript",
+      "blockingQuestions": []
+    }
+  ]
+}

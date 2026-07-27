@@ -1,0 +1,282 @@
+{
+  "capabilities": {
+    "formatAdapters": [
+      "lerobot-v2"
+    ],
+    "sourceAdapters": [
+      "github-sparse-checkout",
+      "huggingface-hub"
+    ]
+  },
+  "contentSha256": "4b8d5f71953338af75986aebcaf9b6a9d011ba56c2e2f198d6933c57be99e832",
+  "entries": [
+    {
+      "manifest": {
+        "display_name": "SO-101 teleop cubes to bowl",
+        "episode_schema": {
+          "action": {
+            "dimension": 6,
+            "names": [
+              "shoulder_pan.pos",
+              "shoulder_lift.pos",
+              "elbow_flex.pos",
+              "wrist_flex.pos",
+              "wrist_roll.pos",
+              "gripper.pos"
+            ],
+            "units": "unknown"
+          },
+          "cameras": [
+            "observation.images.ego",
+            "observation.images.external_D455"
+          ],
+          "fps": 30.0,
+          "state": {
+            "dimension": 6,
+            "names": [
+              "shoulder_pan.pos",
+              "shoulder_lift.pos",
+              "elbow_flex.pos",
+              "wrist_flex.pos",
+              "wrist_roll.pos",
+              "gripper.pos"
+            ],
+            "units": "unknown"
+          },
+          "total_episodes": 50,
+          "total_frames": 38777
+        },
+        "fixture": null,
+        "format": {
+          "adapter": "lerobot-v2",
+          "codebase_version": "v2.1",
+          "implementation_status": "planned"
+        },
+        "id": "qb1t-so101-teleop-cubes",
+        "kind": "dataset",
+        "known_limitations": [
+          "Source and format adapters are contracts only in v0.1.",
+          "Dataset state and action units must be verified from actual frames before URDF animation.",
+          "The dataset-to-robot relationship is alias-derived rather than an exact catalog identifier."
+        ],
+        "license": "apache-2.0",
+        "mixture": {
+          "compatibility_tier": "provisional-homogeneous",
+          "domain": "physical-tabletop-manipulation",
+          "embodiment": "so-arm101",
+          "schema_family": "lerobot-joint-position-6d"
+        },
+        "modalities": [
+          "sensor/rgb",
+          "sensor/proprioception",
+          "state-space/joint-position",
+          "action-space/joint-position",
+          "action-space/gripper-command",
+          "task/manipulation"
+        ],
+        "profile_wref": "DatasetProfile/huggingface/qb1t/so101-teleop-cubes",
+        "required_assessments": [
+          "source/listed",
+          "meta/info-present",
+          "meta/features-parse",
+          "meta/robot-type-present",
+          "license/present"
+        ],
+        "robot_evidence": {
+          "confidence": 0.9,
+          "match_method": "alias-map",
+          "notes": "alias-map: so101_follower -> so101",
+          "recorded_with_wref": "RecordedWith/huggingface/qb1t/so101-teleop-cubes",
+          "requires_user_confirmation": true,
+          "robot_wref": "wh:bencaunt/robot-models/Robot/the-robot-studio/so-arm101"
+        },
+        "schema_version": 1,
+        "source": {
+          "adapter": "huggingface-hub",
+          "implementation_status": "planned",
+          "location_resolved_from_warmhub": true
+        },
+        "upstream_revision": "2f932198e8925e60f02ed86171f6929845651b92",
+        "warmhub": {
+          "attribution_url": "https://app.warmhub.ai/orgs/bencaunt/repos/robot-datasets",
+          "observed_pinned_wref": "Dataset/huggingface/qb1t/so101-teleop-cubes@v1",
+          "repo": "bencaunt/robot-datasets",
+          "wref": "Dataset/huggingface/qb1t/so101-teleop-cubes"
+        }
+      },
+      "path": "catalog/datasets/qb1t-so101-teleop-cubes.yaml"
+    },
+    {
+      "manifest": {
+        "display_name": "SO-101 action-conditioned state dynamics proof of concept",
+        "evaluation": {
+          "metrics": [
+            "one_step_mse",
+            "one_step_mae",
+            "per_joint_mae",
+            "rollout_mse_by_horizon",
+            "joint_limit_violation_rate",
+            "persistence_baseline_mse"
+          ],
+          "rerun_required": true,
+          "rollout_horizons": [
+            1,
+            5,
+            10
+          ],
+          "urdf_animation_requires_validated_joint_mapping": true,
+          "urdf_required": true
+        },
+        "id": "so101-state-dynamics-poc",
+        "intent": {
+          "horizon_steps": 1,
+          "prediction_target": "next joint-state delta",
+          "purpose": "validate the end-to-end data, training, checkpoint, device, and Rerun contracts"
+        },
+        "kind": "recipe",
+        "known_limitations": [
+          "This state-only baseline is a pipeline proof, not the final visual world model.",
+          "Source/format materialization and the trainer are the next implementation milestone.",
+          "Remote provisioning is intentionally absent until teardown tests pass."
+        ],
+        "mixture": {
+          "datasets": [
+            "qb1t-so101-teleop-cubes"
+          ],
+          "missing_modality_policy": "reject-required",
+          "normalization": "per-feature-training-split",
+          "robot": "so-arm101",
+          "sampling": "episode-uniform",
+          "split": {
+            "test_fraction": 0.1,
+            "train_fraction": 0.8,
+            "unit": "episode",
+            "validation_fraction": 0.1
+          },
+          "type": "homogeneous"
+        },
+        "modalities": {
+          "optional": [
+            "sensor/rgb"
+          ],
+          "required": [
+            "sensor/proprioception",
+            "state-space/joint-position",
+            "action-space/joint-position"
+          ]
+        },
+        "model": {
+          "action_dimension": 6,
+          "family": "action-conditioned-state-dynamics",
+          "hidden_dimension": 128,
+          "hidden_layers": 2,
+          "implementation": "robot_world_models.models.state_dynamics:StateDynamicsMLP",
+          "state_dimension": 6
+        },
+        "remote_compute": {
+          "cloud_type": "secure",
+          "enabled": true,
+          "explicit_approval_required": true,
+          "gpu_count": 1,
+          "implementation_status": "plan-only",
+          "max_hourly_usd": null,
+          "max_runtime_minutes": null,
+          "persistent_volume": false,
+          "preferred_gpu": "NVIDIA GeForce RTX 5090",
+          "provider": "runpod",
+          "public_service_ports": false
+        },
+        "schema_version": 1,
+        "training": {
+          "batch_size": 256,
+          "checkpoint_every_steps": 250,
+          "learning_rate": 0.001,
+          "local_devices": [
+            "mps",
+            "cuda",
+            "cpu"
+          ],
+          "max_steps": 2000,
+          "seed": 7,
+          "smoke_test_steps": 100,
+          "subset": {
+            "max_episodes": 10
+          }
+        }
+      },
+      "path": "catalog/recipes/so101-state-dynamics-poc.yaml"
+    },
+    {
+      "manifest": {
+        "description": {
+          "entrypoint": "Simulation/SO101/so101_new_calib.urdf",
+          "format": "urdf",
+          "license": "Apache-2.0",
+          "model_profile_wref": "ModelProfile/github/therobotstudio/so-arm100/simulation/so101/so101-new-calib-urdf",
+          "observed_pinned_wref": "Description/github/therobotstudio/so-arm100/simulation/so101/so101-new-calib-urdf@v1",
+          "package_root": "Simulation/SO101",
+          "pinned_commit": "63eede5a636e548eb8f2854e558bd343c21db9f7",
+          "redistributable": true,
+          "source_repo": "TheRobotStudio/SO-ARM100",
+          "wref": "Description/github/therobotstudio/so-arm100/simulation/so101/so101-new-calib-urdf"
+        },
+        "display_name": "SO-ARM101",
+        "id": "so-arm101",
+        "joint_mapping": {
+          "animate_in_rerun": false,
+          "dataset_units": "unknown",
+          "entries": {
+            "elbow_flex.pos": "3",
+            "gripper.pos": "6",
+            "shoulder_lift.pos": "2",
+            "shoulder_pan.pos": "1",
+            "wrist_flex.pos": "4",
+            "wrist_roll.pos": "5"
+          },
+          "status": "provisional",
+          "urdf_units": "radians",
+          "validation_required": [
+            "confirm dataset values and units from representative frames",
+            "confirm zero offsets and sign conventions",
+            "compare observed extrema with URDF joint limits",
+            "visually inspect a known pose in Rerun"
+          ]
+        },
+        "kind": "robot",
+        "known_limitations": [
+          "The upstream URDF uses numeric joint names while the dataset uses semantic feature names.",
+          "The whole package root, including meshes, must be materialized for Rerun URDF import."
+        ],
+        "model_profile": {
+          "dof": 6,
+          "has_collision_geometry": true,
+          "joint_count": 6,
+          "link_count": 7,
+          "mass_total_kg": 0.632006,
+          "mesh_count": 34
+        },
+        "required_assessments": [
+          "source/entrypoint-exists",
+          "parse/urdf",
+          "assets/meshes-present",
+          "physics/joint-limits-present",
+          "physics/inertia-plausible"
+        ],
+        "schema_version": 1,
+        "source": {
+          "adapter": "github-sparse-checkout",
+          "implementation_status": "planned",
+          "location_resolved_from_warmhub": true
+        },
+        "warmhub": {
+          "attribution_url": "https://app.warmhub.ai/orgs/bencaunt/repos/robot-models",
+          "observed_pinned_wref": "Robot/the-robot-studio/so-arm101@v1",
+          "repo": "bencaunt/robot-models",
+          "wref": "Robot/the-robot-studio/so-arm101"
+        }
+      },
+      "path": "catalog/robots/so-arm101.yaml"
+    }
+  ],
+  "schemaVersion": "robot-world-models.catalog.v1"
+}

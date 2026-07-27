@@ -1,0 +1,58 @@
+schema_version: 1
+kind: robot
+id: so-arm101
+display_name: SO-ARM101
+warmhub:
+  repo: bencaunt/robot-models
+  wref: Robot/the-robot-studio/so-arm101
+  observed_pinned_wref: Robot/the-robot-studio/so-arm101@v1
+  attribution_url: https://app.warmhub.ai/orgs/bencaunt/repos/robot-models
+description:
+  wref: Description/github/therobotstudio/so-arm100/simulation/so101/so101-new-calib-urdf
+  observed_pinned_wref: Description/github/therobotstudio/so-arm100/simulation/so101/so101-new-calib-urdf@v1
+  model_profile_wref: ModelProfile/github/therobotstudio/so-arm100/simulation/so101/so101-new-calib-urdf
+  format: urdf
+  license: Apache-2.0
+  redistributable: true
+  pinned_commit: 63eede5a636e548eb8f2854e558bd343c21db9f7
+  source_repo: TheRobotStudio/SO-ARM100
+  package_root: Simulation/SO101
+  entrypoint: Simulation/SO101/so101_new_calib.urdf
+source:
+  adapter: github-sparse-checkout
+  implementation_status: planned
+  location_resolved_from_warmhub: true
+model_profile:
+  dof: 6
+  joint_count: 6
+  link_count: 7
+  mesh_count: 34
+  mass_total_kg: 0.632006
+  has_collision_geometry: true
+required_assessments:
+  - source/entrypoint-exists
+  - parse/urdf
+  - assets/meshes-present
+  - physics/joint-limits-present
+  - physics/inertia-plausible
+joint_mapping:
+  status: provisional
+  animate_in_rerun: false
+  dataset_units: unknown
+  urdf_units: radians
+  entries:
+    shoulder_pan.pos: "1"
+    shoulder_lift.pos: "2"
+    elbow_flex.pos: "3"
+    wrist_flex.pos: "4"
+    wrist_roll.pos: "5"
+    gripper.pos: "6"
+  validation_required:
+    - confirm dataset values and units from representative frames
+    - confirm zero offsets and sign conventions
+    - compare observed extrema with URDF joint limits
+    - visually inspect a known pose in Rerun
+known_limitations:
+  - The upstream URDF uses numeric joint names while the dataset uses semantic feature names.
+  - The whole package root, including meshes, must be materialized for Rerun URDF import.
+

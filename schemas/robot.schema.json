@@ -1,0 +1,281 @@
+{
+  "$defs": {
+    "AdapterRef": {
+      "additionalProperties": false,
+      "properties": {
+        "adapter": {
+          "title": "Adapter",
+          "type": "string"
+        },
+        "implementation_status": {
+          "enum": [
+            "implemented",
+            "planned"
+          ],
+          "title": "Implementation Status",
+          "type": "string"
+        },
+        "location_resolved_from_warmhub": {
+          "title": "Location Resolved From Warmhub",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "adapter",
+        "implementation_status",
+        "location_resolved_from_warmhub"
+      ],
+      "title": "AdapterRef",
+      "type": "object"
+    },
+    "JointMapping": {
+      "additionalProperties": false,
+      "properties": {
+        "animate_in_rerun": {
+          "title": "Animate In Rerun",
+          "type": "boolean"
+        },
+        "dataset_units": {
+          "title": "Dataset Units",
+          "type": "string"
+        },
+        "entries": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "title": "Entries",
+          "type": "object"
+        },
+        "status": {
+          "enum": [
+            "provisional",
+            "validated"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "urdf_units": {
+          "title": "Urdf Units",
+          "type": "string"
+        },
+        "validation_required": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Validation Required",
+          "type": "array"
+        }
+      },
+      "required": [
+        "status",
+        "animate_in_rerun",
+        "dataset_units",
+        "urdf_units",
+        "entries",
+        "validation_required"
+      ],
+      "title": "JointMapping",
+      "type": "object"
+    },
+    "RobotDescription": {
+      "additionalProperties": false,
+      "properties": {
+        "entrypoint": {
+          "title": "Entrypoint",
+          "type": "string"
+        },
+        "format": {
+          "enum": [
+            "urdf",
+            "mjcf"
+          ],
+          "title": "Format",
+          "type": "string"
+        },
+        "license": {
+          "title": "License",
+          "type": "string"
+        },
+        "model_profile_wref": {
+          "title": "Model Profile Wref",
+          "type": "string"
+        },
+        "observed_pinned_wref": {
+          "title": "Observed Pinned Wref",
+          "type": "string"
+        },
+        "package_root": {
+          "title": "Package Root",
+          "type": "string"
+        },
+        "pinned_commit": {
+          "title": "Pinned Commit",
+          "type": "string"
+        },
+        "redistributable": {
+          "title": "Redistributable",
+          "type": "boolean"
+        },
+        "source_repo": {
+          "title": "Source Repo",
+          "type": "string"
+        },
+        "wref": {
+          "title": "Wref",
+          "type": "string"
+        }
+      },
+      "required": [
+        "wref",
+        "observed_pinned_wref",
+        "model_profile_wref",
+        "format",
+        "license",
+        "redistributable",
+        "pinned_commit",
+        "source_repo",
+        "package_root",
+        "entrypoint"
+      ],
+      "title": "RobotDescription",
+      "type": "object"
+    },
+    "RobotModelProfile": {
+      "additionalProperties": false,
+      "properties": {
+        "dof": {
+          "exclusiveMinimum": 0,
+          "title": "Dof",
+          "type": "integer"
+        },
+        "has_collision_geometry": {
+          "title": "Has Collision Geometry",
+          "type": "boolean"
+        },
+        "joint_count": {
+          "exclusiveMinimum": 0,
+          "title": "Joint Count",
+          "type": "integer"
+        },
+        "link_count": {
+          "exclusiveMinimum": 0,
+          "title": "Link Count",
+          "type": "integer"
+        },
+        "mass_total_kg": {
+          "minimum": 0,
+          "title": "Mass Total Kg",
+          "type": "number"
+        },
+        "mesh_count": {
+          "minimum": 0,
+          "title": "Mesh Count",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "dof",
+        "joint_count",
+        "link_count",
+        "mesh_count",
+        "mass_total_kg",
+        "has_collision_geometry"
+      ],
+      "title": "RobotModelProfile",
+      "type": "object"
+    },
+    "WarmHubRecord": {
+      "additionalProperties": false,
+      "properties": {
+        "attribution_url": {
+          "title": "Attribution Url",
+          "type": "string"
+        },
+        "observed_pinned_wref": {
+          "title": "Observed Pinned Wref",
+          "type": "string"
+        },
+        "repo": {
+          "title": "Repo",
+          "type": "string"
+        },
+        "wref": {
+          "title": "Wref",
+          "type": "string"
+        }
+      },
+      "required": [
+        "repo",
+        "wref",
+        "observed_pinned_wref",
+        "attribution_url"
+      ],
+      "title": "WarmHubRecord",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "description": {
+      "$ref": "#/$defs/RobotDescription"
+    },
+    "display_name": {
+      "title": "Display Name",
+      "type": "string"
+    },
+    "id": {
+      "title": "Id",
+      "type": "string"
+    },
+    "joint_mapping": {
+      "$ref": "#/$defs/JointMapping"
+    },
+    "kind": {
+      "const": "robot",
+      "title": "Kind",
+      "type": "string"
+    },
+    "known_limitations": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Known Limitations",
+      "type": "array"
+    },
+    "model_profile": {
+      "$ref": "#/$defs/RobotModelProfile"
+    },
+    "required_assessments": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Required Assessments",
+      "type": "array"
+    },
+    "schema_version": {
+      "const": 1,
+      "title": "Schema Version",
+      "type": "integer"
+    },
+    "source": {
+      "$ref": "#/$defs/AdapterRef"
+    },
+    "warmhub": {
+      "$ref": "#/$defs/WarmHubRecord"
+    }
+  },
+  "required": [
+    "schema_version",
+    "kind",
+    "id",
+    "display_name",
+    "warmhub",
+    "description",
+    "source",
+    "model_profile",
+    "required_assessments",
+    "joint_mapping"
+  ],
+  "title": "RobotManifest",
+  "type": "object"
+}

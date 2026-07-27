@@ -1,0 +1,78 @@
+schema_version: 1
+kind: dataset
+id: qb1t-so101-teleop-cubes
+display_name: SO-101 teleop cubes to bowl
+warmhub:
+  repo: bencaunt/robot-datasets
+  wref: Dataset/huggingface/qb1t/so101-teleop-cubes
+  observed_pinned_wref: Dataset/huggingface/qb1t/so101-teleop-cubes@v1
+  attribution_url: https://app.warmhub.ai/orgs/bencaunt/repos/robot-datasets
+profile_wref: DatasetProfile/huggingface/qb1t/so101-teleop-cubes
+license: apache-2.0
+upstream_revision: 2f932198e8925e60f02ed86171f6929845651b92
+source:
+  adapter: huggingface-hub
+  implementation_status: planned
+  location_resolved_from_warmhub: true
+format:
+  adapter: lerobot-v2
+  implementation_status: planned
+  codebase_version: v2.1
+robot_evidence:
+  recorded_with_wref: RecordedWith/huggingface/qb1t/so101-teleop-cubes
+  robot_wref: wh:bencaunt/robot-models/Robot/the-robot-studio/so-arm101
+  match_method: alias-map
+  confidence: 0.9
+  notes: "alias-map: so101_follower -> so101"
+  requires_user_confirmation: true
+modalities:
+  - sensor/rgb
+  - sensor/proprioception
+  - state-space/joint-position
+  - action-space/joint-position
+  - action-space/gripper-command
+  - task/manipulation
+episode_schema:
+  fps: 30
+  total_episodes: 50
+  total_frames: 38777
+  state:
+    dimension: 6
+    names:
+      - shoulder_pan.pos
+      - shoulder_lift.pos
+      - elbow_flex.pos
+      - wrist_flex.pos
+      - wrist_roll.pos
+      - gripper.pos
+    units: unknown
+  action:
+    dimension: 6
+    names:
+      - shoulder_pan.pos
+      - shoulder_lift.pos
+      - elbow_flex.pos
+      - wrist_flex.pos
+      - wrist_roll.pos
+      - gripper.pos
+    units: unknown
+  cameras:
+    - observation.images.ego
+    - observation.images.external_D455
+mixture:
+  embodiment: so-arm101
+  schema_family: lerobot-joint-position-6d
+  domain: physical-tabletop-manipulation
+  compatibility_tier: provisional-homogeneous
+required_assessments:
+  - source/listed
+  - meta/info-present
+  - meta/features-parse
+  - meta/robot-type-present
+  - license/present
+fixture: null
+known_limitations:
+  - Source and format adapters are contracts only in v0.1.
+  - Dataset state and action units must be verified from actual frames before URDF animation.
+  - The dataset-to-robot relationship is alias-derived rather than an exact catalog identifier.
+

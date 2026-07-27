@@ -1,0 +1,333 @@
+{
+  "$defs": {
+    "AdapterRef": {
+      "additionalProperties": false,
+      "properties": {
+        "adapter": {
+          "title": "Adapter",
+          "type": "string"
+        },
+        "implementation_status": {
+          "enum": [
+            "implemented",
+            "planned"
+          ],
+          "title": "Implementation Status",
+          "type": "string"
+        },
+        "location_resolved_from_warmhub": {
+          "title": "Location Resolved From Warmhub",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "adapter",
+        "implementation_status",
+        "location_resolved_from_warmhub"
+      ],
+      "title": "AdapterRef",
+      "type": "object"
+    },
+    "DatasetMixtureLabels": {
+      "additionalProperties": false,
+      "properties": {
+        "compatibility_tier": {
+          "title": "Compatibility Tier",
+          "type": "string"
+        },
+        "domain": {
+          "title": "Domain",
+          "type": "string"
+        },
+        "embodiment": {
+          "title": "Embodiment",
+          "type": "string"
+        },
+        "schema_family": {
+          "title": "Schema Family",
+          "type": "string"
+        }
+      },
+      "required": [
+        "embodiment",
+        "schema_family",
+        "domain",
+        "compatibility_tier"
+      ],
+      "title": "DatasetMixtureLabels",
+      "type": "object"
+    },
+    "EpisodeSchema": {
+      "additionalProperties": false,
+      "properties": {
+        "action": {
+          "$ref": "#/$defs/VectorFeature"
+        },
+        "cameras": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Cameras",
+          "type": "array"
+        },
+        "fps": {
+          "exclusiveMinimum": 0,
+          "title": "Fps",
+          "type": "number"
+        },
+        "state": {
+          "$ref": "#/$defs/VectorFeature"
+        },
+        "total_episodes": {
+          "exclusiveMinimum": 0,
+          "title": "Total Episodes",
+          "type": "integer"
+        },
+        "total_frames": {
+          "exclusiveMinimum": 0,
+          "title": "Total Frames",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "fps",
+        "total_episodes",
+        "total_frames",
+        "state",
+        "action",
+        "cameras"
+      ],
+      "title": "EpisodeSchema",
+      "type": "object"
+    },
+    "FormatRef": {
+      "additionalProperties": false,
+      "properties": {
+        "adapter": {
+          "title": "Adapter",
+          "type": "string"
+        },
+        "codebase_version": {
+          "title": "Codebase Version",
+          "type": "string"
+        },
+        "implementation_status": {
+          "enum": [
+            "implemented",
+            "planned"
+          ],
+          "title": "Implementation Status",
+          "type": "string"
+        }
+      },
+      "required": [
+        "adapter",
+        "implementation_status",
+        "codebase_version"
+      ],
+      "title": "FormatRef",
+      "type": "object"
+    },
+    "RobotEvidence": {
+      "additionalProperties": false,
+      "properties": {
+        "confidence": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Confidence",
+          "type": "number"
+        },
+        "match_method": {
+          "title": "Match Method",
+          "type": "string"
+        },
+        "notes": {
+          "title": "Notes",
+          "type": "string"
+        },
+        "recorded_with_wref": {
+          "title": "Recorded With Wref",
+          "type": "string"
+        },
+        "requires_user_confirmation": {
+          "title": "Requires User Confirmation",
+          "type": "boolean"
+        },
+        "robot_wref": {
+          "title": "Robot Wref",
+          "type": "string"
+        }
+      },
+      "required": [
+        "recorded_with_wref",
+        "robot_wref",
+        "match_method",
+        "confidence",
+        "notes",
+        "requires_user_confirmation"
+      ],
+      "title": "RobotEvidence",
+      "type": "object"
+    },
+    "VectorFeature": {
+      "additionalProperties": false,
+      "properties": {
+        "dimension": {
+          "exclusiveMinimum": 0,
+          "title": "Dimension",
+          "type": "integer"
+        },
+        "names": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Names",
+          "type": "array"
+        },
+        "units": {
+          "title": "Units",
+          "type": "string"
+        }
+      },
+      "required": [
+        "dimension",
+        "names",
+        "units"
+      ],
+      "title": "VectorFeature",
+      "type": "object"
+    },
+    "WarmHubRecord": {
+      "additionalProperties": false,
+      "properties": {
+        "attribution_url": {
+          "title": "Attribution Url",
+          "type": "string"
+        },
+        "observed_pinned_wref": {
+          "title": "Observed Pinned Wref",
+          "type": "string"
+        },
+        "repo": {
+          "title": "Repo",
+          "type": "string"
+        },
+        "wref": {
+          "title": "Wref",
+          "type": "string"
+        }
+      },
+      "required": [
+        "repo",
+        "wref",
+        "observed_pinned_wref",
+        "attribution_url"
+      ],
+      "title": "WarmHubRecord",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "display_name": {
+      "title": "Display Name",
+      "type": "string"
+    },
+    "episode_schema": {
+      "$ref": "#/$defs/EpisodeSchema"
+    },
+    "fixture": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Fixture"
+    },
+    "format": {
+      "$ref": "#/$defs/FormatRef"
+    },
+    "id": {
+      "title": "Id",
+      "type": "string"
+    },
+    "kind": {
+      "const": "dataset",
+      "title": "Kind",
+      "type": "string"
+    },
+    "known_limitations": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Known Limitations",
+      "type": "array"
+    },
+    "license": {
+      "title": "License",
+      "type": "string"
+    },
+    "mixture": {
+      "$ref": "#/$defs/DatasetMixtureLabels"
+    },
+    "modalities": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Modalities",
+      "type": "array"
+    },
+    "profile_wref": {
+      "title": "Profile Wref",
+      "type": "string"
+    },
+    "required_assessments": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Required Assessments",
+      "type": "array"
+    },
+    "robot_evidence": {
+      "$ref": "#/$defs/RobotEvidence"
+    },
+    "schema_version": {
+      "const": 1,
+      "title": "Schema Version",
+      "type": "integer"
+    },
+    "source": {
+      "$ref": "#/$defs/AdapterRef"
+    },
+    "upstream_revision": {
+      "title": "Upstream Revision",
+      "type": "string"
+    },
+    "warmhub": {
+      "$ref": "#/$defs/WarmHubRecord"
+    }
+  },
+  "required": [
+    "schema_version",
+    "kind",
+    "id",
+    "display_name",
+    "warmhub",
+    "profile_wref",
+    "license",
+    "upstream_revision",
+    "source",
+    "format",
+    "robot_evidence",
+    "modalities",
+    "episode_schema",
+    "mixture",
+    "required_assessments",
+    "fixture"
+  ],
+  "title": "DatasetManifest",
+  "type": "object"
+}

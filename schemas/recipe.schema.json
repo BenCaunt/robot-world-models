@@ -1,0 +1,463 @@
+{
+  "$defs": {
+    "EvaluationContract": {
+      "additionalProperties": false,
+      "properties": {
+        "metrics": {
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Metrics",
+          "type": "array"
+        },
+        "rerun_required": {
+          "const": true,
+          "title": "Rerun Required",
+          "type": "boolean"
+        },
+        "rollout_horizons": {
+          "items": {
+            "type": "integer"
+          },
+          "minItems": 1,
+          "title": "Rollout Horizons",
+          "type": "array"
+        },
+        "urdf_animation_requires_validated_joint_mapping": {
+          "title": "Urdf Animation Requires Validated Joint Mapping",
+          "type": "boolean"
+        },
+        "urdf_required": {
+          "title": "Urdf Required",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "rerun_required",
+        "urdf_required",
+        "urdf_animation_requires_validated_joint_mapping",
+        "metrics",
+        "rollout_horizons"
+      ],
+      "title": "EvaluationContract",
+      "type": "object"
+    },
+    "ModelContract": {
+      "additionalProperties": false,
+      "properties": {
+        "action_dimension": {
+          "exclusiveMinimum": 0,
+          "title": "Action Dimension",
+          "type": "integer"
+        },
+        "family": {
+          "title": "Family",
+          "type": "string"
+        },
+        "hidden_dimension": {
+          "exclusiveMinimum": 0,
+          "title": "Hidden Dimension",
+          "type": "integer"
+        },
+        "hidden_layers": {
+          "exclusiveMinimum": 0,
+          "title": "Hidden Layers",
+          "type": "integer"
+        },
+        "implementation": {
+          "title": "Implementation",
+          "type": "string"
+        },
+        "state_dimension": {
+          "exclusiveMinimum": 0,
+          "title": "State Dimension",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "family",
+        "implementation",
+        "state_dimension",
+        "action_dimension",
+        "hidden_dimension",
+        "hidden_layers"
+      ],
+      "title": "ModelContract",
+      "type": "object"
+    },
+    "RecipeIntent": {
+      "additionalProperties": false,
+      "properties": {
+        "horizon_steps": {
+          "exclusiveMinimum": 0,
+          "title": "Horizon Steps",
+          "type": "integer"
+        },
+        "prediction_target": {
+          "title": "Prediction Target",
+          "type": "string"
+        },
+        "purpose": {
+          "title": "Purpose",
+          "type": "string"
+        }
+      },
+      "required": [
+        "prediction_target",
+        "horizon_steps",
+        "purpose"
+      ],
+      "title": "RecipeIntent",
+      "type": "object"
+    },
+    "RecipeMixture": {
+      "additionalProperties": false,
+      "properties": {
+        "datasets": {
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Datasets",
+          "type": "array"
+        },
+        "missing_modality_policy": {
+          "title": "Missing Modality Policy",
+          "type": "string"
+        },
+        "normalization": {
+          "title": "Normalization",
+          "type": "string"
+        },
+        "robot": {
+          "title": "Robot",
+          "type": "string"
+        },
+        "sampling": {
+          "title": "Sampling",
+          "type": "string"
+        },
+        "split": {
+          "$ref": "#/$defs/SplitPolicy"
+        },
+        "type": {
+          "enum": [
+            "homogeneous",
+            "heterogeneous"
+          ],
+          "title": "Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "datasets",
+        "robot",
+        "sampling",
+        "missing_modality_policy",
+        "normalization",
+        "split"
+      ],
+      "title": "RecipeMixture",
+      "type": "object"
+    },
+    "RecipeModalities": {
+      "additionalProperties": false,
+      "properties": {
+        "optional": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Optional",
+          "type": "array"
+        },
+        "required": {
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Required",
+          "type": "array"
+        }
+      },
+      "required": [
+        "required"
+      ],
+      "title": "RecipeModalities",
+      "type": "object"
+    },
+    "RemoteComputeContract": {
+      "additionalProperties": false,
+      "properties": {
+        "cloud_type": {
+          "enum": [
+            "secure",
+            "community"
+          ],
+          "title": "Cloud Type",
+          "type": "string"
+        },
+        "enabled": {
+          "title": "Enabled",
+          "type": "boolean"
+        },
+        "explicit_approval_required": {
+          "const": true,
+          "title": "Explicit Approval Required",
+          "type": "boolean"
+        },
+        "gpu_count": {
+          "const": 1,
+          "title": "Gpu Count",
+          "type": "integer"
+        },
+        "implementation_status": {
+          "enum": [
+            "plan-only",
+            "implemented"
+          ],
+          "title": "Implementation Status",
+          "type": "string"
+        },
+        "max_hourly_usd": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Max Hourly Usd"
+        },
+        "max_runtime_minutes": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Max Runtime Minutes"
+        },
+        "persistent_volume": {
+          "title": "Persistent Volume",
+          "type": "boolean"
+        },
+        "preferred_gpu": {
+          "title": "Preferred Gpu",
+          "type": "string"
+        },
+        "provider": {
+          "const": "runpod",
+          "title": "Provider",
+          "type": "string"
+        },
+        "public_service_ports": {
+          "title": "Public Service Ports",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "enabled",
+        "implementation_status",
+        "provider",
+        "preferred_gpu",
+        "gpu_count",
+        "cloud_type",
+        "persistent_volume",
+        "public_service_ports",
+        "explicit_approval_required"
+      ],
+      "title": "RemoteComputeContract",
+      "type": "object"
+    },
+    "SplitPolicy": {
+      "additionalProperties": false,
+      "properties": {
+        "test_fraction": {
+          "exclusiveMaximum": 1,
+          "exclusiveMinimum": 0,
+          "title": "Test Fraction",
+          "type": "number"
+        },
+        "train_fraction": {
+          "exclusiveMaximum": 1,
+          "exclusiveMinimum": 0,
+          "title": "Train Fraction",
+          "type": "number"
+        },
+        "unit": {
+          "enum": [
+            "episode",
+            "source",
+            "time"
+          ],
+          "title": "Unit",
+          "type": "string"
+        },
+        "validation_fraction": {
+          "exclusiveMaximum": 1,
+          "exclusiveMinimum": 0,
+          "title": "Validation Fraction",
+          "type": "number"
+        }
+      },
+      "required": [
+        "unit",
+        "train_fraction",
+        "validation_fraction",
+        "test_fraction"
+      ],
+      "title": "SplitPolicy",
+      "type": "object"
+    },
+    "TrainingContract": {
+      "additionalProperties": false,
+      "properties": {
+        "batch_size": {
+          "exclusiveMinimum": 0,
+          "title": "Batch Size",
+          "type": "integer"
+        },
+        "checkpoint_every_steps": {
+          "exclusiveMinimum": 0,
+          "title": "Checkpoint Every Steps",
+          "type": "integer"
+        },
+        "learning_rate": {
+          "exclusiveMinimum": 0,
+          "title": "Learning Rate",
+          "type": "number"
+        },
+        "local_devices": {
+          "items": {
+            "enum": [
+              "mps",
+              "cuda",
+              "cpu"
+            ],
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Local Devices",
+          "type": "array"
+        },
+        "max_steps": {
+          "exclusiveMinimum": 0,
+          "title": "Max Steps",
+          "type": "integer"
+        },
+        "seed": {
+          "title": "Seed",
+          "type": "integer"
+        },
+        "smoke_test_steps": {
+          "exclusiveMinimum": 0,
+          "title": "Smoke Test Steps",
+          "type": "integer"
+        },
+        "subset": {
+          "$ref": "#/$defs/TrainingSubset"
+        }
+      },
+      "required": [
+        "seed",
+        "batch_size",
+        "learning_rate",
+        "max_steps",
+        "smoke_test_steps",
+        "checkpoint_every_steps",
+        "local_devices",
+        "subset"
+      ],
+      "title": "TrainingContract",
+      "type": "object"
+    },
+    "TrainingSubset": {
+      "additionalProperties": false,
+      "properties": {
+        "max_episodes": {
+          "exclusiveMinimum": 0,
+          "title": "Max Episodes",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "max_episodes"
+      ],
+      "title": "TrainingSubset",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "display_name": {
+      "title": "Display Name",
+      "type": "string"
+    },
+    "evaluation": {
+      "$ref": "#/$defs/EvaluationContract"
+    },
+    "id": {
+      "title": "Id",
+      "type": "string"
+    },
+    "intent": {
+      "$ref": "#/$defs/RecipeIntent"
+    },
+    "kind": {
+      "const": "recipe",
+      "title": "Kind",
+      "type": "string"
+    },
+    "known_limitations": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Known Limitations",
+      "type": "array"
+    },
+    "mixture": {
+      "$ref": "#/$defs/RecipeMixture"
+    },
+    "modalities": {
+      "$ref": "#/$defs/RecipeModalities"
+    },
+    "model": {
+      "$ref": "#/$defs/ModelContract"
+    },
+    "remote_compute": {
+      "$ref": "#/$defs/RemoteComputeContract"
+    },
+    "schema_version": {
+      "const": 1,
+      "title": "Schema Version",
+      "type": "integer"
+    },
+    "training": {
+      "$ref": "#/$defs/TrainingContract"
+    }
+  },
+  "required": [
+    "schema_version",
+    "kind",
+    "id",
+    "display_name",
+    "intent",
+    "mixture",
+    "modalities",
+    "model",
+    "training",
+    "evaluation",
+    "remote_compute"
+  ],
+  "title": "RecipeManifest",
+  "type": "object"
+}

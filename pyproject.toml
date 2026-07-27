@@ -1,0 +1,51 @@
+[project]
+name = "robot-world-models"
+version = "0.1.0"
+description = "WarmHub-first, agent-friendly recipes for training and evaluating robot world models"
+readme = "README.md"
+requires-python = ">=3.12,<3.14"
+license = { text = "MIT" }
+authors = [{ name = "Ben Caunt" }]
+dependencies = [
+  "httpx>=0.28,<1",
+  "pydantic>=2.11,<3",
+  "pyyaml>=6.0.2,<7",
+  "rerun-sdk>=0.34.1,<0.35",
+  "typer>=0.16,<1",
+]
+
+[project.optional-dependencies]
+train = [
+  "numpy>=2.2,<3",
+  "torch>=2.11,<2.12",
+]
+lerobot = [
+  "lerobot[dataset]>=0.6,<0.7",
+]
+
+[dependency-groups]
+dev = [
+  "pytest>=8.4,<9",
+  "ruff>=0.12,<1",
+]
+
+[project.scripts]
+rwm = "robot_world_models.cli:app"
+
+[build-system]
+requires = ["hatchling>=1.27,<2"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/robot_world_models"]
+
+[tool.pytest.ini_options]
+addopts = "-q"
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
