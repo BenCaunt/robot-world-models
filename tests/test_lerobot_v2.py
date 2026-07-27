@@ -24,6 +24,30 @@ def test_materialization_patterns_select_only_requested_episode_payloads() -> No
     assert patterns == ["meta/*", "data/chunk-000/episode_000001.parquet"]
 
 
+def test_materialization_patterns_include_only_selected_camera_payloads() -> None:
+    files = [
+        "meta/info.json",
+        "data/chunk-000/episode_000000.parquet",
+        "data/chunk-000/episode_000001.parquet",
+        "videos/chunk-000/observation.images.laptop/episode_000000.mp4",
+        "videos/chunk-000/observation.images.laptop/episode_000001.mp4",
+        "videos/chunk-000/observation.images.phone1/episode_000000.mp4",
+        "videos/chunk-000/observation.images.phone1/episode_000001.mp4",
+    ]
+
+    patterns = LeRobotV2Adapter.materialization_patterns(
+        files,
+        [1],
+        cameras=["observation.images.laptop"],
+    )
+
+    assert patterns == [
+        "meta/*",
+        "data/chunk-000/episode_000001.parquet",
+        "videos/chunk-000/observation.images.laptop/episode_000001.mp4",
+    ]
+
+
 def test_adapter_preserves_episode_boundary(tmp_path: Path) -> None:
     (tmp_path / "meta").mkdir()
     data_dir = tmp_path / "data" / "chunk-000"

@@ -30,7 +30,8 @@ flowchart LR
 | Dataset manifest | declarative mapping and compatibility | transport implementation |
 | Dataset-robot mapping | feature/joint names, affine transforms, units, coverage, evidence, validation status | global robot identity |
 | Source adapter | download, authentication, resume, checksum | dataset schema |
-| Format adapter | source layout to canonical episodes | recipe-specific training |
+| Format adapter | source layout, payload selection, and canonical episodes | recipe-specific training |
+| Visual cache | video decoding, exact frame alignment, encoder transform, reusable features | source transport or model training |
 | Recipe | mixture, modalities, model and evaluation contract | one-off extraction logic |
 | Compute adapter | device or remote lifecycle | model semantics |
 | Rerun evaluator | inspectable inputs, predictions, metrics, robot geometry | training decisions |
@@ -47,9 +48,17 @@ robot_world_models.runpod     plan and policy only in v0.1
 robot_world_models.models     small reference models
 robot_world_models.eval       mandatory Rerun receipts
 robot_world_models.training   receipt-producing local recipe runner
+robot_world_models.visual_data  video decoding and frozen-feature cache contract
+robot_world_models.visual_training  visual recipe composition, training, and rollout evaluation
 ```
 
 The first bounded SO-101 spike established two reusable boundaries: source adapters selectively
 materialize immutable upstream paths, while format adapters own storage-version parsing and
 canonical episode validation. LeRobot library compatibility is not used as a proxy for dataset
 storage compatibility.
+
+The visual spike adds a third boundary: a visual-feature cache owns the relationship between one
+decoded camera frame, the frozen encoder's exact processed view, its spatial latent tokens, and the
+RGB reconstruction target. The dynamics model consumes that cache without importing a source or
+format adapter. This lets a newly contributed dataset reuse visual training as soon as its adapter
+can provide aligned camera paths and canonical episodes.

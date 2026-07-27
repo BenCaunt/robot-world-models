@@ -5,6 +5,7 @@ import math
 from collections.abc import Mapping, Sequence
 from pathlib import Path
 
+import numpy as np
 import rerun as rr
 
 from robot_world_models.contracts import JointTransform
@@ -63,11 +64,20 @@ def write_state_evaluation(
     joint_mapping: Mapping[str, JointTransform] | None = None,
     unmapped_features: Sequence[str] = (),
     out_of_range_policy: str = "reject",
+    actual_images: Sequence[np.ndarray] | None = None,
+    predicted_images: Sequence[np.ndarray] | None = None,
 ) -> tuple[Path, dict[str, object]]:
     if len(actual_states) != len(predicted_states):
         raise ValueError("actual and predicted state sequences must have equal length")
     if any(len(row) != len(joint_names) for row in [*actual_states, *predicted_states]):
         raise ValueError("every state row must match joint_names")
+    if (actual_images is None) != (predicted_images is None):
+        raise ValueError("actual_images and predicted_images must be provided together")
+    if actual_images is not None and predicted_images is not None and (
+        len(actual_images) != len(actual_states)
+        or len(predicted_images) != len(predicted_states)
+    ):
+        raise ValueError("image and state sequences must have equal length")
     if joint_mapping is not None:
         mapped = set(joint_mapping)
         named = set(joint_names)
@@ -166,6 +176,17 @@ def write_state_evaluation(
         paired_states = zip(actual_states, predicted_states, strict=True)
         for step, (actual, predicted) in enumerate(paired_states):
             recording.set_time("step", sequence=step)
+            if actual_images is not None and predicted_images is not None:
+                actual_image = np.asarray(actual_images[step], dtype=np.uint8)
+                predicted_image = np.asarray(predicted_images[step], dtype=np.uint8)
+                if actual_image.shape != predicted_image.shape:
+                    raise ValueError("actual and predicted image shapes must match")
+                error_image = np.abs(
+                    actual_image.astype(np.int16) - predicted_image.astype(np.int16)
+                ).astype(np.uint8)
+                recording.log("vision/actual", rr.Image(actual_image))
+                recording.log("vision/predicted", rr.Image(predicted_image))
+                recording.log("vision/absolute_error", rr.Image(error_image))
             for index, joint_name in enumerate(joint_names):
                 recording.log(f"state/actual/{joint_name}", rr.Scalars(actual[index]))
                 recording.log(f"state/predicted/{joint_name}", rr.Scalars(predicted[index]))

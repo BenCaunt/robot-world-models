@@ -1,0 +1,106 @@
+schema_version: 1
+kind: recipe
+id: so101-dinov2-visual-poc
+display_name: SO-101 action-conditioned DINOv2 visual world-model proof
+intent:
+  prediction_target: next pooled DINOv2 patch tokens, decoded RGB frame, and joint state
+  horizon_steps: 1
+  purpose: prove a camera-to-latent-to-rollout pipeline on MPS before scaling it on CUDA
+mixture:
+  type: homogeneous
+  datasets:
+    - nashmo-so101
+  robot: so-arm101
+  sampling: episode-uniform windows
+  missing_modality_policy: reject-required
+  normalization: per-feature-training-split for state and action; L2-normalized visual tokens
+  split:
+    unit: episode
+    train_fraction: 0.6
+    validation_fraction: 0.2
+    test_fraction: 0.2
+joint_mapping: nashmo-so101-to-so-arm101
+modalities:
+  required:
+    - sensor/rgb
+    - sensor/proprioception
+    - state-space/joint-position
+    - action-space/joint-position
+  optional: []
+model:
+  family: action-conditioned-visual-latent-dynamics
+  implementation: robot_world_models.models.visual_latent:VisualLatentDynamics
+  state_dimension: 6
+  action_dimension: 6
+  hidden_dimension: 512
+  hidden_layers: 2
+  vision:
+    camera: observation.images.laptop
+    context_frames: 3
+    output_size: 64
+    predictor_hidden_dimension: 512
+    predictor_hidden_layers: 2
+    encoder_batch_size: 32
+    state_loss_weight: 0.1
+    decoder_loss_weight: 1.0
+    predicted_pixel_loss_weight: 0.25
+    encoder:
+      model_id: facebook/dinov2-small
+      revision: ed25f3a31f01632728cabb09d1542f84ab7b0056
+      source_url: https://huggingface.co/facebook/dinov2-small
+      license: apache-2.0
+      warmhub_resolution: registry-gap
+      frozen: true
+      input_size: 224
+      patch_pool_grid: 4
+      latent_dimension: 384
+training:
+  seed: 7
+  batch_size: 32
+  learning_rate: 0.001
+  max_steps: 1000
+  smoke_test_steps: 30
+  checkpoint_every_steps: 250
+  local_devices:
+    - mps
+    - cuda
+    - cpu
+  subset:
+    max_episodes: 5
+evaluation:
+  rerun_required: true
+  urdf_required: true
+  urdf_animation_requires_validated_joint_mapping: true
+  metrics:
+    - one_step_latent_cosine_error
+    - rollout_latent_cosine_error_by_horizon
+    - latent_persistence_baseline_cosine_error
+    - mean_action_ablation_cosine_error
+    - one_step_pixel_mae_0_1
+    - decoder_reconstruction_mae_0_1
+    - one_step_state_mae
+  rollout_horizons:
+    - 1
+    - 5
+    - 10
+remote_compute:
+  enabled: true
+  implementation_status: plan-only
+  provider: runpod
+  preferred_gpu: NVIDIA GeForce RTX 5090
+  gpu_count: 1
+  cloud_type: secure
+  max_hourly_usd: null
+  max_runtime_minutes: null
+  persistent_volume: false
+  public_service_ports: false
+  explicit_approval_required: true
+known_limitations:
+  - The first visual recipe uses only the laptop camera and five episodes.
+  - DINOv2 is not yet represented in either WarmHub registry; the official upstream artifact is
+    pinned and the gap is recorded in discovery.json.
+  - The 4x4 pooled patch grid and 64x64 learned decoder favor a bounded local proof over visual
+    fidelity.
+  - The predictor is trained one step at a time, so open-loop error is expected to compound.
+  - Rerun animates the five validated arm joints; the unmapped gripper remains at its URDF default.
+  - Remote provisioning remains plan-only until teardown tests pass.

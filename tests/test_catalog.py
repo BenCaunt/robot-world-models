@@ -24,6 +24,7 @@ def test_repository_manifests_validate_and_cross_reference() -> None:
         "nashmo-so101",
         "so-arm101",
         "nashmo-so101-to-so-arm101",
+        "so101-dinov2-visual-poc",
         "so101-state-dynamics-poc",
     }
 
@@ -36,7 +37,7 @@ def test_catalog_is_deterministic() -> None:
     payload = json.loads(first)
     assert payload["schemaVersion"] == "robot-world-models.catalog.v1"
     assert payload["contentSha256"]
-    assert len(payload["entries"]) == 5
+    assert len(payload["entries"]) == 6
 
 
 def test_generated_files_are_current() -> None:

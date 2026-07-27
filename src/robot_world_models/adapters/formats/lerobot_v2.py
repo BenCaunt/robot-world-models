@@ -64,6 +64,7 @@ class LeRobotV2Adapter:
     def materialization_patterns(
         upstream_files: Sequence[str],
         episode_indices: Sequence[int],
+        cameras: Sequence[str] = (),
     ) -> list[str]:
         selected_names = {
             f"episode_{episode_index:06d}.parquet" for episode_index in episode_indices
@@ -80,7 +81,50 @@ class LeRobotV2Adapter:
                 - {path.rsplit("/", maxsplit=1)[-1] for path in episode_paths}
             )
             raise LeRobotV2Error(f"preflight did not find selected episodes: {missing}")
-        return ["meta/*", *episode_paths]
+        video_paths: list[str] = []
+        for camera in cameras:
+            selected_video_paths = sorted(
+                path
+                for path in upstream_files
+                if path.startswith("videos/")
+                and f"/{camera}/" in path
+                and path.rsplit("/", maxsplit=1)[-1].replace(".mp4", ".parquet")
+                in selected_names
+            )
+            if len(selected_video_paths) != len(selected_names):
+                found = {
+                    path.rsplit("/", maxsplit=1)[-1].replace(".mp4", ".parquet")
+                    for path in selected_video_paths
+                }
+                missing = sorted(selected_names - found)
+                raise LeRobotV2Error(
+                    f"preflight did not find camera {camera!r} episodes: {missing}"
+                )
+            video_paths.extend(selected_video_paths)
+        return ["meta/*", *episode_paths, *video_paths]
+
+    @classmethod
+    def video_path(
+        cls,
+        source: SourceReceipt,
+        *,
+        camera: str,
+        episode_index: int,
+    ):
+        info = cls._info(source)
+        feature = info.get("features", {}).get(camera)
+        if feature is None or feature.get("dtype") != "video":
+            raise LeRobotV2Error(f"camera is not declared as a video feature: {camera}")
+        template = info["video_path"]
+        relative = template.format(
+            episode_chunk=episode_index // int(info["chunks_size"]),
+            video_key=camera,
+            episode_index=episode_index,
+        )
+        path = source.destination / relative
+        if not path.exists():
+            raise LeRobotV2Error(f"missing episode video: {relative}")
+        return path
 
     def episodes(self, source: SourceReceipt) -> Iterator[CanonicalEpisode]:
         try:

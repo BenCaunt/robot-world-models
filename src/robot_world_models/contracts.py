@@ -223,6 +223,31 @@ class RecipeModalities(ContractModel):
     optional: list[str] = Field(default_factory=list)
 
 
+class VisionEncoderContract(ContractModel):
+    model_id: str
+    revision: str = Field(pattern=r"^[0-9a-f]{40}$")
+    source_url: str
+    license: str
+    warmhub_resolution: Literal["resolved", "registry-gap"]
+    frozen: Literal[True]
+    input_size: int = Field(gt=0)
+    patch_pool_grid: int = Field(gt=0)
+    latent_dimension: int = Field(gt=0)
+
+
+class VisionModelContract(ContractModel):
+    camera: str
+    context_frames: int = Field(gt=0)
+    output_size: int = Field(gt=0)
+    predictor_hidden_dimension: int = Field(gt=0)
+    predictor_hidden_layers: int = Field(gt=0)
+    encoder_batch_size: int = Field(gt=0)
+    state_loss_weight: float = Field(ge=0)
+    decoder_loss_weight: float = Field(ge=0)
+    predicted_pixel_loss_weight: float = Field(ge=0)
+    encoder: VisionEncoderContract
+
+
 class ModelContract(ContractModel):
     family: str
     implementation: str
@@ -230,6 +255,7 @@ class ModelContract(ContractModel):
     action_dimension: int = Field(gt=0)
     hidden_dimension: int = Field(gt=0)
     hidden_layers: int = Field(gt=0)
+    vision: VisionModelContract | None = None
 
 
 class TrainingSubset(ContractModel):

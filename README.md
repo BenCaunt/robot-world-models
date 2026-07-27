@@ -25,9 +25,10 @@ The first local spike is executable and provides:
 - a generated machine-readable catalog;
 - live, Arc-aware discovery across both WarmHub registries;
 - reusable Hugging Face, LeRobot v2.1, and GitHub description adapters;
-- an SO-101 state-dynamics proof-of-concept trainer for MPS, CUDA, and CPU;
+- SO-101 state and DINOv2 visual-latent proof-of-concept trainers for MPS, CUDA, and CPU;
+- reusable AV1 video materialization, exact frame alignment, and revisioned visual-feature caches;
 - mandatory Rerun evaluation output, including separated actual/predicted URDF animation for
-  validated joint transforms;
+  validated joint transforms and actual/predicted RGB for visual recipes;
 - a cost-bounded RunPod planning contract and a separate deployment prompt.
 
 The RunPod path is deliberately plan-only in this milestone: no command creates paid infrastructure
@@ -52,6 +53,14 @@ uv sync --extra train --extra lerobot
 uv run rwm device
 uv run rwm train so101-state-dynamics-poc --run-dir runs/so101-demo
 uv run rerun runs/so101-demo/evaluation.rrd
+```
+
+Run the one-camera visual-latent proof:
+
+```bash
+uv sync --extra train --extra lerobot --extra vision
+uv run rwm train so101-dinov2-visual-poc --run-dir runs/so101-visual
+uv run rerun runs/so101-visual/evaluation.rrd
 ```
 
 Start an agent with [`prompts/create-world-model.md`](prompts/create-world-model.md). The agent
@@ -84,9 +93,20 @@ persistence baseline. Open-loop MSE rose to 0.733 at ten steps.
 See [`docs/spikes/so101-state-dynamics-2026-07-27.md`](docs/spikes/so101-state-dynamics-2026-07-27.md)
 for the full result, failures, and next experiment.
 
+The follow-on visual spike used five episodes and a frozen, revision-pinned DINOv2-S encoder. A
+2.42M-parameter action-conditioned predictor trained for 1,000 steps on MPS in about 43 seconds.
+On the held-out episode it reduced one-step latent cosine error by 16.7% relative to persistence and
+by 20.7% relative to replacing the action with its training mean. Ten-step error still grew to about
+five times one-step error, and the deliberately small 4x4 spatial bottleneck produced only coarse
+64x64 reconstructions.
+
+See [`docs/spikes/so101-visual-latent-2026-07-27.md`](docs/spikes/so101-visual-latent-2026-07-27.md)
+for the exact contract, measurements, visual findings, and next experiment.
+
 ## Status
 
 WarmHub resolution, bounded state-data materialization, local training, checkpointing, baseline
-evaluation, and five-joint actual/predicted Rerun animation are implemented. Visual training, the
-SO-101 gripper transform, and paid RunPod provisioning remain future milestones. The RunPod CLI
-remains intentionally plan-only.
+evaluation, one-camera visual-latent training, cached DINOv2 features, and actual/predicted Rerun
+images plus five-joint URDF animation are implemented. Sharper visual reconstruction,
+multi-step visual training, the SO-101 gripper transform, and paid RunPod provisioning remain future
+milestones. The RunPod CLI remains intentionally plan-only.

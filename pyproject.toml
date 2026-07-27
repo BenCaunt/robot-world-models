@@ -22,6 +22,11 @@ train = [
 lerobot = [
   "lerobot[dataset]>=0.6,<0.7",
 ]
+vision = [
+    "av>=15,<17",
+    "pillow>=11,<13",
+    "transformers>=4.57,<6",
+]
 
 [dependency-groups]
 dev = [

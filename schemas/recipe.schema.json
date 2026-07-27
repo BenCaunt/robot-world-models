@@ -73,6 +73,17 @@
           "exclusiveMinimum": 0,
           "title": "State Dimension",
           "type": "integer"
+        },
+        "vision": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/VisionModelContract"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
         }
       },
       "required": [
@@ -393,6 +404,135 @@
         "max_episodes"
       ],
       "title": "TrainingSubset",
+      "type": "object"
+    },
+    "VisionEncoderContract": {
+      "additionalProperties": false,
+      "properties": {
+        "frozen": {
+          "const": true,
+          "title": "Frozen",
+          "type": "boolean"
+        },
+        "input_size": {
+          "exclusiveMinimum": 0,
+          "title": "Input Size",
+          "type": "integer"
+        },
+        "latent_dimension": {
+          "exclusiveMinimum": 0,
+          "title": "Latent Dimension",
+          "type": "integer"
+        },
+        "license": {
+          "title": "License",
+          "type": "string"
+        },
+        "model_id": {
+          "title": "Model Id",
+          "type": "string"
+        },
+        "patch_pool_grid": {
+          "exclusiveMinimum": 0,
+          "title": "Patch Pool Grid",
+          "type": "integer"
+        },
+        "revision": {
+          "pattern": "^[0-9a-f]{40}$",
+          "title": "Revision",
+          "type": "string"
+        },
+        "source_url": {
+          "title": "Source Url",
+          "type": "string"
+        },
+        "warmhub_resolution": {
+          "enum": [
+            "resolved",
+            "registry-gap"
+          ],
+          "title": "Warmhub Resolution",
+          "type": "string"
+        }
+      },
+      "required": [
+        "model_id",
+        "revision",
+        "source_url",
+        "license",
+        "warmhub_resolution",
+        "frozen",
+        "input_size",
+        "patch_pool_grid",
+        "latent_dimension"
+      ],
+      "title": "VisionEncoderContract",
+      "type": "object"
+    },
+    "VisionModelContract": {
+      "additionalProperties": false,
+      "properties": {
+        "camera": {
+          "title": "Camera",
+          "type": "string"
+        },
+        "context_frames": {
+          "exclusiveMinimum": 0,
+          "title": "Context Frames",
+          "type": "integer"
+        },
+        "decoder_loss_weight": {
+          "minimum": 0,
+          "title": "Decoder Loss Weight",
+          "type": "number"
+        },
+        "encoder": {
+          "$ref": "#/$defs/VisionEncoderContract"
+        },
+        "encoder_batch_size": {
+          "exclusiveMinimum": 0,
+          "title": "Encoder Batch Size",
+          "type": "integer"
+        },
+        "output_size": {
+          "exclusiveMinimum": 0,
+          "title": "Output Size",
+          "type": "integer"
+        },
+        "predicted_pixel_loss_weight": {
+          "minimum": 0,
+          "title": "Predicted Pixel Loss Weight",
+          "type": "number"
+        },
+        "predictor_hidden_dimension": {
+          "exclusiveMinimum": 0,
+          "title": "Predictor Hidden Dimension",
+          "type": "integer"
+        },
+        "predictor_hidden_layers": {
+          "exclusiveMinimum": 0,
+          "title": "Predictor Hidden Layers",
+          "type": "integer"
+        },
+        "state_loss_weight": {
+          "minimum": 0,
+          "title": "State Loss Weight",
+          "type": "number"
+        }
+      },
+      "required": [
+        "camera",
+        "context_frames",
+        "output_size",
+        "predictor_hidden_dimension",
+        "predictor_hidden_layers",
+        "encoder_batch_size",
+        "state_loss_weight",
+        "decoder_loss_weight",
+        "predicted_pixel_loss_weight",
+        "encoder"
+      ],
+      "title": "VisionModelContract",
       "type": "object"
     }
   },

@@ -55,3 +55,14 @@ def test_recipe_uses_episode_split() -> None:
     assert manifest.kind == "recipe"
     assert manifest.mixture.split.unit == "episode"
     assert manifest.evaluation.rerun_required is True
+
+
+def test_visual_recipe_pins_encoder_and_requires_rgb() -> None:
+    path = repository_root() / "catalog" / "recipes" / "so101-dinov2-visual-poc.yaml"
+    payload = yaml.safe_load(path.read_text())
+    manifest = MANIFEST_ADAPTER.validate_python(payload)
+
+    assert manifest.model.vision.camera == "observation.images.laptop"
+    assert len(manifest.model.vision.encoder.revision) == 40
+    assert manifest.model.vision.encoder.warmhub_resolution == "registry-gap"
+    assert "sensor/rgb" in manifest.modalities.required

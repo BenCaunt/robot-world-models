@@ -17,6 +17,15 @@ provider documentation before changing dependency pins or implementing paid infr
 - [LeRobotDataset v3](https://huggingface.co/docs/lerobot/en/lerobot-dataset-v3)
 - [PyTorch MPS backend](https://docs.pytorch.org/docs/stable/notes/mps.html)
 
+## Visual world models and encoders
+
+- [DINOv2 repository and pretrained models](https://github.com/facebookresearch/dinov2)
+- [Pinned DINOv2-small model](https://huggingface.co/facebook/dinov2-small/tree/ed25f3a31f01632728cabb09d1542f84ab7b0056)
+- [DINO-WM project](https://dino-wm.github.io/)
+- [DINO-WM paper](https://arxiv.org/abs/2411.04983)
+- [Meta JEPA world-model reference code](https://github.com/facebookresearch/jepa-wms)
+- [V-JEPA 2 repository](https://github.com/facebookresearch/vjepa2)
+
 ## Rerun
 
 - [Rerun getting started](https://rerun.io/docs/getting-started)

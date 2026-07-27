@@ -30,6 +30,13 @@ large download before I approve the data plan.
 10. End with reproducible commands, artifact paths, caveats, and the modular contribution that future
     agents can reuse.
 
+For visual recipes, use the exact encoder preprocessing output as the source for both cached
+features and decoder RGB targets. Record resize, crop, orientation, normalization, model revision,
+cache version, and per-episode frame counts. Compare latent prediction against both persistence and
+a training-mean action ablation. Report ground-truth-latent decoder reconstruction separately from
+predicted-latent pixel error, and inspect the generated actual/predicted preview before calling the
+visual result useful.
+
 For an implemented homogeneous recipe, prefer `uv run rwm train <recipe-id> --run-dir
 runs/<run-id>` over recipe-specific scripts. Treat feature-to-URDF semantics as a dataset-to-robot
 mapping capability and skip physical metrics while it remains provisional.

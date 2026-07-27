@@ -8,7 +8,7 @@
       "huggingface-hub"
     ]
   },
-  "contentSha256": "8a8b73f90593994f9dbeaa70fc8ae9bf6f523efb7af4ec5dc38797a1f9eac09c",
+  "contentSha256": "fe6e18c2e3644bdab60c32e65be98dd95ef3127e7047b609811e104e203a5290",
   "entries": [
     {
       "manifest": {
@@ -283,6 +283,132 @@
     },
     {
       "manifest": {
+        "display_name": "SO-101 action-conditioned DINOv2 visual world-model proof",
+        "evaluation": {
+          "metrics": [
+            "one_step_latent_cosine_error",
+            "rollout_latent_cosine_error_by_horizon",
+            "latent_persistence_baseline_cosine_error",
+            "mean_action_ablation_cosine_error",
+            "one_step_pixel_mae_0_1",
+            "decoder_reconstruction_mae_0_1",
+            "one_step_state_mae"
+          ],
+          "rerun_required": true,
+          "rollout_horizons": [
+            1,
+            5,
+            10
+          ],
+          "urdf_animation_requires_validated_joint_mapping": true,
+          "urdf_required": true
+        },
+        "id": "so101-dinov2-visual-poc",
+        "intent": {
+          "horizon_steps": 1,
+          "prediction_target": "next pooled DINOv2 patch tokens, decoded RGB frame, and joint state",
+          "purpose": "prove a camera-to-latent-to-rollout pipeline on MPS before scaling it on CUDA"
+        },
+        "joint_mapping": "nashmo-so101-to-so-arm101",
+        "kind": "recipe",
+        "known_limitations": [
+          "The first visual recipe uses only the laptop camera and five episodes.",
+          "DINOv2 is not yet represented in either WarmHub registry; the official upstream artifact is pinned and the gap is recorded in discovery.json.",
+          "The 4x4 pooled patch grid and 64x64 learned decoder favor a bounded local proof over visual fidelity.",
+          "The predictor is trained one step at a time, so open-loop error is expected to compound.",
+          "Rerun animates the five validated arm joints; the unmapped gripper remains at its URDF default.",
+          "Remote provisioning remains plan-only until teardown tests pass."
+        ],
+        "mixture": {
+          "datasets": [
+            "nashmo-so101"
+          ],
+          "missing_modality_policy": "reject-required",
+          "normalization": "per-feature-training-split for state and action; L2-normalized visual tokens",
+          "robot": "so-arm101",
+          "sampling": "episode-uniform windows",
+          "split": {
+            "test_fraction": 0.2,
+            "train_fraction": 0.6,
+            "unit": "episode",
+            "validation_fraction": 0.2
+          },
+          "type": "homogeneous"
+        },
+        "modalities": {
+          "optional": [],
+          "required": [
+            "sensor/rgb",
+            "sensor/proprioception",
+            "state-space/joint-position",
+            "action-space/joint-position"
+          ]
+        },
+        "model": {
+          "action_dimension": 6,
+          "family": "action-conditioned-visual-latent-dynamics",
+          "hidden_dimension": 512,
+          "hidden_layers": 2,
+          "implementation": "robot_world_models.models.visual_latent:VisualLatentDynamics",
+          "state_dimension": 6,
+          "vision": {
+            "camera": "observation.images.laptop",
+            "context_frames": 3,
+            "decoder_loss_weight": 1.0,
+            "encoder": {
+              "frozen": true,
+              "input_size": 224,
+              "latent_dimension": 384,
+              "license": "apache-2.0",
+              "model_id": "facebook/dinov2-small",
+              "patch_pool_grid": 4,
+              "revision": "ed25f3a31f01632728cabb09d1542f84ab7b0056",
+              "source_url": "https://huggingface.co/facebook/dinov2-small",
+              "warmhub_resolution": "registry-gap"
+            },
+            "encoder_batch_size": 32,
+            "output_size": 64,
+            "predicted_pixel_loss_weight": 0.25,
+            "predictor_hidden_dimension": 512,
+            "predictor_hidden_layers": 2,
+            "state_loss_weight": 0.1
+          }
+        },
+        "remote_compute": {
+          "cloud_type": "secure",
+          "enabled": true,
+          "explicit_approval_required": true,
+          "gpu_count": 1,
+          "implementation_status": "plan-only",
+          "max_hourly_usd": null,
+          "max_runtime_minutes": null,
+          "persistent_volume": false,
+          "preferred_gpu": "NVIDIA GeForce RTX 5090",
+          "provider": "runpod",
+          "public_service_ports": false
+        },
+        "schema_version": 1,
+        "training": {
+          "batch_size": 32,
+          "checkpoint_every_steps": 250,
+          "learning_rate": 0.001,
+          "local_devices": [
+            "mps",
+            "cuda",
+            "cpu"
+          ],
+          "max_steps": 1000,
+          "seed": 7,
+          "smoke_test_steps": 30,
+          "subset": {
+            "max_episodes": 5
+          }
+        }
+      },
+      "path": "catalog/recipes/so101-dinov2-visual-poc.yaml"
+    },
+    {
+      "manifest": {
         "display_name": "SO-101 action-conditioned state dynamics proof of concept",
         "evaluation": {
           "metrics": [
@@ -348,7 +474,8 @@
           "hidden_dimension": 128,
           "hidden_layers": 2,
           "implementation": "robot_world_models.models.state_dynamics:StateDynamicsMLP",
-          "state_dimension": 6
+          "state_dimension": 6,
+          "vision": null
         },
         "remote_compute": {
           "cloud_type": "secure",

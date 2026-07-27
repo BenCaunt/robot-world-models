@@ -85,6 +85,9 @@ class WarmHubCLI:
             "datasets": datasets.get("items", []),
         }
 
+    def exact_match(self, query: str, repo: str) -> dict[str, Any]:
+        return self._json("thing", "list", "--repo", repo, "--match", query)
+
     def resolve_dataset(self, manifest: DatasetManifest) -> dict[str, Any]:
         dataset = self.view(manifest.warmhub.wref, manifest.warmhub.repo)
         profile = self.view(manifest.profile_wref, manifest.warmhub.repo)

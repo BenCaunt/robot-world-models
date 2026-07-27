@@ -6,6 +6,8 @@ import shutil
 import subprocess
 from pathlib import Path
 
+import numpy as np
+
 from robot_world_models.contracts import JointTransform
 from robot_world_models.eval.rerun_eval import apply_joint_transform, write_state_evaluation
 
@@ -69,6 +71,14 @@ def test_rerun_recording_contains_time_varying_robot_transforms(tmp_path: Path) 
         joint_mapping={"legacy_joint": transform},
         unmapped_features=["gripper"],
         out_of_range_policy="clamp",
+        actual_images=[
+            np.zeros((16, 16, 3), dtype=np.uint8),
+            np.ones((16, 16, 3), dtype=np.uint8),
+        ],
+        predicted_images=[
+            np.ones((16, 16, 3), dtype=np.uint8),
+            np.zeros((16, 16, 3), dtype=np.uint8),
+        ],
     )
 
     assert animation["enabled"] is True
@@ -87,6 +97,8 @@ def test_rerun_recording_contains_time_varying_robot_transforms(tmp_path: Path) 
     assert "/robot/actual/transforms: 1" in stats
     assert "/robot/predicted/transforms: 1" in stats
     assert "/receipt/joint_animation: 1" in stats
+    assert "/vision/actual: 1" in stats
+    assert "/vision/predicted: 1" in stats
 
     printed = subprocess.run(
         [rerun, "rrd", "print", str(output_path)],

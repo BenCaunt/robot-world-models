@@ -1,6 +1,6 @@
 # Robot World Models Specification
 
-Status: draft v0.2 — first bounded SO-101 local spike implemented
+Status: draft v0.3 — bounded SO-101 state and visual-latent spikes implemented
 
 ## 1. Purpose
 
@@ -194,13 +194,18 @@ The initial SO-101 recipe uses an action-conditioned state-dynamics baseline:
 This baseline validates alignment, units, action/state semantics, splits, device selection, training,
 checkpointing, and Rerun output. It is a pipeline proof, not the final visual world model.
 
-Once it passes, the next model tier is an action-conditioned visual latent model:
+The implemented next tier is an action-conditioned visual latent model:
 
 ```text
-image_t -> encoder -> latent_t
-(latent_t, state_t, action_t) -> latent_(t+1:t+h)
-latent -> decoder or predictive head
+camera[t-2:t] -> frozen DINOv2-S -> pooled spatial tokens[t-2:t]
+(tokens[t-2:t], state_t, action_t) -> tokens_(t+1), state_(t+1)
+tokens -> lightweight RGB decoder for qualitative inspection
 ```
+
+The visual cache must derive both features and RGB reconstruction targets from the exact same image
+processor output. Encoder resize, crop, orientation, and normalization are part of the cache
+contract. Independently resizing the raw frame for decoder supervision is invalid because it can
+ask the decoder to reconstruct pixels the encoder never observed.
 
 Existing open weights may be fine-tuned when their license, modality contract, encoder resolution,
 action representation, and embodiment assumptions match. Otherwise, begin with the small baseline
@@ -247,8 +252,18 @@ Minimum state-model metrics:
 - naive persistence baseline;
 - metrics per dataset for heterogeneous mixtures.
 
-Visual-model evaluation later adds perceptual and task-relevant metrics, but visual inspection in
-Rerun remains mandatory.
+Minimum visual-model additions:
+
+- latent cosine error at one and multiple rollout horizons;
+- a latent persistence baseline;
+- an action ablation that replaces action with its training mean;
+- decoded pixel error;
+- decoder reconstruction error on ground-truth latents, so decoder limitations are not confused
+  with dynamics error;
+- side-by-side actual, predicted, and absolute-error images in Rerun.
+
+Task-relevant metrics remain dataset- and task-specific, but visual inspection in Rerun is
+mandatory.
 
 **Exit artifact:** `runs/<run-id>/evaluation.rrd` plus `metrics.json`.
 
@@ -417,6 +432,20 @@ steps. Model metrics remain in the dataset's raw mixed units. Rerun verifies 300
 actual/predicted scalar trajectories plus separated, tinted SO-101 robots with dynamic transforms
 for five arm joints. It counts and clamps out-of-limit values for rendering and leaves the
 unmapped gripper at its URDF default.
+
+The second complete MPS run used the laptop camera from five episodes, split 3/1/1 by episode. It
+decoded and aligned every selected AV1 frame, extracted frozen DINOv2-S tokens from an
+Apache-2.0 upstream model pinned to commit `ed25f3a31f01632728cabb09d1542f84ab7b0056`, pooled the
+16x16 patch grid to 4x4, and cached encoder-aligned 64x64 RGB targets. Exact `dinov2` lookup returned
+no record in either WarmHub registry, so the run receipt marks an explicit registry gap and records
+the pinned official fallback.
+
+The 2,417,065-parameter predictor/decoder trained for 1,000 steps in about 43 seconds on MPS.
+Held-out one-step latent cosine error was 0.0570 versus 0.0684 for persistence and 0.0718 when action
+was replaced by its training mean. Error grew to 0.2833 at ten steps. Predicted-pixel MAE was 0.1232
+on normalized RGB; ground-truth-latent decoder MAE was 0.1242, confirming that the 4x4 representation
+and small decoder—not dynamics alone—limit visual fidelity. Rerun contains a 30-step open-loop
+actual/predicted image rollout and the corresponding animated robot trajectories.
 
 ## 6. Completion criteria
 

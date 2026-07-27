@@ -90,6 +90,10 @@ Do not hand-edit `catalog/catalog.json` or files under `schemas/`.
 - Record exact config, package lock hash, git commit, WarmHub snapshot, dataset fingerprint, device,
   seed, and checkpoint hash.
 - Compare against a naive baseline.
+- For visual caches, derive RGB targets from the exact encoder-processed view. Record the encoder
+  revision, resize/crop transform, cache version, and per-episode frame alignment.
+- For visual models, compare with persistence and a training-mean action ablation. Report decoder
+  reconstruction error separately from predicted-latent pixel error.
 - Skip and explain physical metrics whose units or robot mapping are not validated.
 
 The current homogeneous reference command is:
@@ -98,6 +102,14 @@ The current homogeneous reference command is:
 uv sync --extra train --extra lerobot
 uv run rwm train so101-state-dynamics-poc --run-dir runs/<run-id>
 uv run rerun rrd verify runs/<run-id>/evaluation.rrd
+```
+
+The current visual reference command is:
+
+```bash
+uv sync --extra train --extra lerobot --extra vision
+uv run rwm train so101-dinov2-visual-poc --run-dir runs/<run-id>
+uv run rerun runs/<run-id>/evaluation.rrd
 ```
 
 ## Rerun rules

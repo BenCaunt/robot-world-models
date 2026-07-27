@@ -433,6 +433,16 @@ def _run_recipe(
     recipe = manifest_by_id(recipe_id)
     if not isinstance(recipe, RecipeManifest):
         raise TrainingSpikeError(f"{recipe_id} is not a recipe")
+    if recipe.model.vision is not None:
+        from robot_world_models.visual_training import run_visual_recipe
+
+        return run_visual_recipe(
+            recipe=recipe,
+            run_dir=run_dir,
+            max_steps=max_steps,
+            smoke_test_steps=smoke_test_steps,
+            max_episodes=max_episodes,
+        )
     if recipe.mixture.type != "homogeneous" or len(recipe.mixture.datasets) != 1:
         raise TrainingSpikeError("the first trainer supports one homogeneous dataset")
     dataset = manifest_by_id(recipe.mixture.datasets[0])
