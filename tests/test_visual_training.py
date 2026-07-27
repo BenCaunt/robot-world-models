@@ -1,9 +1,8 @@
 from __future__ import annotations
 
 import numpy as np
-import torch
+import pytest
 
-from robot_world_models.models.visual_latent import VisualLatentDynamics
 from robot_world_models.visual_data import CachedVisualEpisode, cache_visual_episode
 from robot_world_models.visual_training import _write_rollout_preview, visual_window_refs
 
@@ -31,6 +30,9 @@ def test_visual_windows_never_cross_episode_boundaries() -> None:
 
 
 def test_visual_model_shapes_and_decoder_range() -> None:
+    torch = pytest.importorskip("torch")
+    from robot_world_models.models.visual_latent import VisualLatentDynamics
+
     model = VisualLatentDynamics(
         state_dimension=2,
         action_dimension=2,

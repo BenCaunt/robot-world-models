@@ -3,7 +3,7 @@ from __future__ import annotations
 import time
 from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 
@@ -19,7 +19,6 @@ from robot_world_models.contracts import (
 )
 from robot_world_models.devices import select_device
 from robot_world_models.eval.rerun_eval import write_state_evaluation
-from robot_world_models.models.visual_latent import VisualLatentDynamics
 from robot_world_models.training import (
     Normalization,
     TrainingSpikeError,
@@ -38,6 +37,9 @@ from robot_world_models.visual_data import (
     load_cached_visual_episode,
 )
 from robot_world_models.warmhub import WarmHubCLI
+
+if TYPE_CHECKING:
+    from robot_world_models.models.visual_latent import VisualLatentDynamics
 
 
 @dataclass(frozen=True)
@@ -58,6 +60,8 @@ def visual_window_refs(
 
 
 def _make_model(recipe: RecipeManifest) -> VisualLatentDynamics:
+    from robot_world_models.models.visual_latent import VisualLatentDynamics
+
     vision = recipe.model.vision
     if vision is None:
         raise TrainingSpikeError("visual trainer requires model.vision")
