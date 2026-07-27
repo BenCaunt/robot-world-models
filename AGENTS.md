@@ -87,6 +87,8 @@ Do not hand-edit `catalog/catalog.json` or files under `schemas/`.
 ## Training rules
 
 - Use episode-aware splits; never randomly split adjacent frames across train and validation.
+- Name the executable sampling unit exactly. Uniform-over-windows, uniform-over-episodes, and
+  uniform-over-sources are different policies; do not label one as another.
 - Fit normalization on training data only.
 - Preserve dataset identity in heterogeneous batches.
 - Seed Python, NumPy, and PyTorch.
@@ -105,6 +107,8 @@ Do not hand-edit `catalog/catalog.json` or files under `schemas/`.
   reconstruction error separately from predicted-latent pixel error.
 - Treat action sensitivity as an architecture gate. Do not promote or scale a predictor that beats
   persistence but remains nearly unchanged under the training-mean action ablation.
+- Before generalizing from one source-held-out result, rotate every member in the approved bounded
+  slice through the test role. Reuse a checksum-verified cache and fit normalization per fold.
 - For residual predictors, preserve the baseline prior at initialization by zero-initializing the
   final delta head. If a model needs a different learning rate to pass the smoke test, record that
   as an explicit optimizer difference.

@@ -24,9 +24,14 @@ runpod_app = typer.Typer(
     no_args_is_help=True,
     help="Plan bounded remote compute; no writes in v0.1.",
 )
+evaluate_app = typer.Typer(
+    no_args_is_help=True,
+    help="Evaluate completed local training runs.",
+)
 app.add_typer(catalog_app, name="catalog")
 app.add_typer(warmhub_app, name="warmhub")
 app.add_typer(runpod_app, name="runpod")
+app.add_typer(evaluate_app, name="evaluate")
 
 
 def _emit(payload: object) -> None:
@@ -124,6 +129,38 @@ def train_command(
             max_steps=max_steps,
             smoke_test_steps=smoke_test_steps,
             max_episodes=max_episodes,
+        )
+    except Exception as error:
+        typer.echo(f"{type(error).__name__}: {error}", err=True)
+        raise typer.Exit(code=1) from error
+    _emit(result)
+
+
+@evaluate_app.command("source-rotation")
+def source_rotation_command(
+    recipe: Annotated[str, typer.Argument(help="Source-held-out visual recipe ID.")],
+    run_dir: Annotated[
+        Path,
+        typer.Option(help="Completed primary run containing the reusable feature cache."),
+    ],
+    max_steps: Annotated[
+        int | None,
+        typer.Option(min=1, help="Optional bounded override for debugging."),
+    ] = None,
+    smoke_test_steps: Annotated[
+        int | None,
+        typer.Option(min=1, help="Optional smoke-test override."),
+    ] = None,
+) -> None:
+    """Rotate every selected collection member through the held-out test role."""
+    from robot_world_models.visual_training import run_visual_source_rotation
+
+    try:
+        result = run_visual_source_rotation(
+            recipe_id=recipe,
+            run_dir=run_dir,
+            max_steps=max_steps,
+            smoke_test_steps=smoke_test_steps,
         )
     except Exception as error:
         typer.echo(f"{type(error).__name__}: {error}", err=True)

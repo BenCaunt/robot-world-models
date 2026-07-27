@@ -9,6 +9,7 @@ from robot_world_models.visual_training import (
     _batch_arrays,
     _evaluate_action_baselines,
     _make_model,
+    _source_rotation_aggregate,
     _write_rollout_preview,
     visual_window_refs,
 )
@@ -284,6 +285,34 @@ def test_action_baselines_report_persistence_and_training_mean_ablation() -> Non
     assert metrics["mean_action_ablation_cosine_error"] > 0
     assert metrics["action_ablation_gap_absolute"] > 0
     assert metrics["improvement_from_action_fraction"] == pytest.approx(1.0)
+
+
+def test_source_rotation_aggregate_weights_unequal_members_by_visual_windows() -> None:
+    def fold(windows: int, offset: float) -> dict[str, object]:
+        return {
+            "visualWindowCount": windows,
+            "testMetrics": {
+                "one_step_latent_cosine_error": 0.1 + offset,
+                "latent_persistence_baseline_cosine_error": 0.2 + offset,
+                "mean_action_ablation_cosine_error": 0.15 + offset,
+                "improvement_over_latent_persistence_fraction": 0.5,
+                "improvement_from_action_fraction": 0.25,
+                "rollout_latent_cosine_error_h5": 0.3 + offset,
+                "rollout_latent_cosine_error_h10": 0.4 + offset,
+            },
+        }
+
+    aggregate = _source_rotation_aggregate([fold(1, 0.0), fold(3, 0.2)])
+
+    assert aggregate["foldCount"] == 2
+    assert aggregate["visualWindowCount"] == 4
+    assert aggregate["allFoldsBeatPersistence"] is True
+    assert aggregate["allFoldsBenefitFromRealAction"] is True
+    metrics = aggregate["metrics"]
+    assert isinstance(metrics, dict)
+    one_step = metrics["one_step_latent_cosine_error"]
+    assert one_step["mean"] == pytest.approx(0.2)
+    assert one_step["windowWeightedMean"] == pytest.approx(0.25)
 
 
 def test_feature_cache_uses_encoder_aligned_rgb_targets(tmp_path, monkeypatch) -> None:

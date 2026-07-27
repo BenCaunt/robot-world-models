@@ -31,7 +31,9 @@ large download before I approve the data plan.
    material action-ablation gap before promoting or scaling the architecture.
    When several collection members or datasets are available, preserve source identity on every
    canonical episode, hold complete sources out of the test split, and report persistence and
-   training-mean-action ablation metrics per source as well as in aggregate.
+   training-mean-action ablation metrics per source as well as in aggregate. Rotate the held-out
+   source before generalizing from one difficult member. State whether training samples uniformly
+   over sources, episodes, or windows; do not treat those policies as interchangeable.
 9. Evaluate with Rerun. Produce an `.rrd` containing observations, predictions, metrics,
    provenance, and the WarmHub-resolved URDF. Animate validated mapping entries, display any
    explicitly unmapped joints, and prove motion by checking temporal `Transform3D` rows plus two

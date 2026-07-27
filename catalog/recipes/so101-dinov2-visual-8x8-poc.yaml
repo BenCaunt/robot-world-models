@@ -11,7 +11,7 @@ mixture:
   datasets:
     - nashmo-so101
   robot: so-arm101
-  sampling: episode-uniform windows
+  sampling: uniform over eligible within-episode visual windows
   missing_modality_policy: reject-required
   normalization: per-feature-training-split for state and action; L2-normalized visual tokens
   split:

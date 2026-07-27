@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import time
 from dataclasses import asdict, dataclass
 from pathlib import Path
@@ -24,12 +25,14 @@ from robot_world_models.eval.rerun_eval import write_state_evaluation
 from robot_world_models.training import (
     Normalization,
     TrainingSpikeError,
+    Transitions,
     _git_receipt,
     _seed_all,
     _sha256,
     _write_json,
     fit_normalization,
     split_canonical_episodes,
+    split_source_held_out_episode_ids,
     transitions_from_episodes,
 )
 from robot_world_models.visual_data import (
@@ -776,6 +779,484 @@ def _write_rollout_preview(
     output_path.parent.mkdir(parents=True, exist_ok=True)
     canvas.save(output_path)
     return output_path
+
+
+def _write_source_rotation_contact_sheet(
+    *,
+    folds: list[dict[str, Any]],
+    output_path: Path,
+) -> Path:
+    from PIL import Image, ImageDraw
+
+    width = 768
+    label_height = 28
+    rendered: list[tuple[str, Image.Image]] = []
+    for fold in folds:
+        preview = Image.open(str(fold["preview"])).convert("RGB")
+        height = round(preview.height * width / preview.width)
+        rendered.append(
+            (
+                str(fold["testSource"]),
+                preview.resize((width, height), Image.Resampling.LANCZOS),
+            )
+        )
+    canvas = Image.new(
+        "RGB",
+        (width, sum(image.height + label_height for _, image in rendered)),
+        "white",
+    )
+    draw = ImageDraw.Draw(canvas)
+    top = 0
+    for source, image in rendered:
+        draw.text((6, top + 6), f"held out: {source}", fill="black")
+        top += label_height
+        canvas.paste(image, (0, top))
+        top += image.height
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    canvas.save(output_path)
+    return output_path
+
+
+def _read_json(path: Path) -> dict[str, Any]:
+    if not path.exists():
+        raise TrainingSpikeError(f"required completed-run artifact is missing: {path}")
+    value = json.loads(path.read_text())
+    if not isinstance(value, dict):
+        raise TrainingSpikeError(f"expected a JSON object: {path}")
+    return value
+
+
+def _cached_normalization(episodes: list[CachedVisualEpisode]) -> Normalization:
+    states = np.concatenate([episode.states[:-1] for episode in episodes])
+    actions = np.concatenate([episode.actions[:-1] for episode in episodes])
+    targets = np.concatenate([episode.states[1:] for episode in episodes])
+    identifiers = np.concatenate(
+        [
+            np.full(len(episode.states) - 1, episode.episode_id, dtype=object)
+            for episode in episodes
+        ]
+    )
+    return fit_normalization(
+        Transitions(
+            states=states,
+            actions=actions,
+            targets=targets,
+            episode_ids=identifiers,
+        )
+    )
+
+
+def _source_rotation_aggregate(
+    folds: list[dict[str, Any]],
+) -> dict[str, object]:
+    if not folds:
+        raise TrainingSpikeError("source rotation produced no folds")
+    metric_names = (
+        "one_step_latent_cosine_error",
+        "latent_persistence_baseline_cosine_error",
+        "mean_action_ablation_cosine_error",
+        "improvement_over_latent_persistence_fraction",
+        "improvement_from_action_fraction",
+        "rollout_latent_cosine_error_h5",
+        "rollout_latent_cosine_error_h10",
+    )
+    total_windows = sum(int(fold["visualWindowCount"]) for fold in folds)
+    metrics: dict[str, dict[str, float]] = {}
+    for name in metric_names:
+        values = [float(fold["testMetrics"][name]) for fold in folds]
+        metrics[name] = {
+            "mean": float(np.mean(values)),
+            "minimum": min(values),
+            "maximum": max(values),
+            "windowWeightedMean": sum(
+                value * int(fold["visualWindowCount"])
+                for value, fold in zip(values, folds, strict=True)
+            )
+            / total_windows,
+        }
+    return {
+        "foldCount": len(folds),
+        "visualWindowCount": total_windows,
+        "metrics": metrics,
+        "allFoldsBeatPersistence": all(
+            float(fold["testMetrics"]["improvement_over_latent_persistence_fraction"])
+            > 0
+            for fold in folds
+        ),
+        "allFoldsBenefitFromRealAction": all(
+            float(fold["testMetrics"]["improvement_from_action_fraction"]) > 0
+            for fold in folds
+        ),
+    }
+
+
+def _rotation_fold_entry(
+    *,
+    test_source: str,
+    reused_existing_run: bool,
+    result: dict[str, Any],
+    evaluation: dict[str, Any],
+    training: dict[str, Any],
+) -> dict[str, Any]:
+    return {
+        "testSource": test_source,
+        "reusedExistingRun": reused_existing_run,
+        "episodes": result["episodes"],
+        "visualWindowCount": int(result["visualWindows"]["test"]),
+        "trainingSeconds": float(training["seconds"]),
+        "checkpoint": training["checkpoint"],
+        "checkpointSha256": training["checkpointSha256"],
+        "testMetrics": evaluation["test"],
+        "rerun": evaluation["rerun"],
+        "rerunSha256": evaluation["rerunSha256"],
+        "preview": evaluation["preview"],
+        "previewSha256": evaluation["previewSha256"],
+    }
+
+
+def run_visual_source_rotation(
+    *,
+    recipe_id: str,
+    run_dir: Path,
+    max_steps: int | None,
+    smoke_test_steps: int | None,
+) -> dict[str, Any]:
+    recipe = manifest_by_id(recipe_id)
+    if not isinstance(recipe, RecipeManifest) or recipe.model.vision is None:
+        raise TrainingSpikeError("source rotation requires a visual recipe")
+    if recipe.mixture.split.unit != "source":
+        raise TrainingSpikeError("source rotation requires mixture.split.unit=source")
+    if len(recipe.training.subset.test_member_roots) != 1:
+        raise TrainingSpikeError(
+            "source rotation requires one primary test_member_root"
+        )
+    member_roots = recipe.training.subset.member_roots
+    if len(member_roots) < 3:
+        raise TrainingSpikeError("source rotation requires at least three members")
+
+    primary_config = _read_json(run_dir / "config.json")
+    primary_result = _read_json(run_dir / "result.json")
+    primary_evaluation = _read_json(run_dir / "evaluation.json")
+    primary_training = _read_json(run_dir / "training.json")
+    if primary_result.get("status") != "complete":
+        raise TrainingSpikeError("the primary run is not complete")
+    configured_recipe = primary_config.get("recipe", {})
+    if configured_recipe.get("id") != recipe.id:
+        raise TrainingSpikeError("the completed run used a different recipe")
+
+    vision = recipe.model.vision
+    cache_receipt_path = run_dir / "feature-cache.json"
+    cache_receipt = _read_json(cache_receipt_path)
+    if cache_receipt.get("encoder") != vision.encoder.model_dump(mode="json"):
+        raise TrainingSpikeError("the completed feature cache uses a different encoder contract")
+    if cache_receipt.get("camera") != vision.camera:
+        raise TrainingSpikeError("the completed feature cache uses a different camera")
+    receipt_entries = cache_receipt.get("episodes")
+    if not isinstance(receipt_entries, list):
+        raise TrainingSpikeError("feature-cache receipt has no episode list")
+
+    cached_episodes: list[CachedVisualEpisode] = []
+    verified_cache_bytes = 0
+    for entry in sorted(receipt_entries, key=lambda item: int(item["episodeId"])):
+        source_member = entry.get("sourceMember")
+        if not isinstance(source_member, str):
+            raise TrainingSpikeError("feature-cache episode is missing sourceMember")
+        cache_path = Path(str(entry["path"]))
+        if not cache_path.exists():
+            cache_path = run_dir / "features" / f"episode-{int(entry['episodeId']):06d}.npz"
+        if not cache_path.exists():
+            raise TrainingSpikeError(f"feature cache is missing: {cache_path}")
+        if _sha256(cache_path) != entry["sha256"]:
+            raise TrainingSpikeError(f"feature-cache checksum mismatch: {cache_path}")
+        verified_cache_bytes += cache_path.stat().st_size
+        cached_episodes.append(
+            load_cached_visual_episode(
+                str(entry["episodeId"]),
+                cache_path,
+                source_member=source_member,
+            )
+        )
+    materialized_sources = {
+        episode.source_member for episode in cached_episodes
+    }
+    if materialized_sources != set(member_roots):
+        raise TrainingSpikeError(
+            "feature-cache members differ from the recipe: "
+            f"{sorted(str(value) for value in materialized_sources)}"
+        )
+
+    dataset = manifest_by_id(recipe.mixture.datasets[0])
+    mapping = manifest_by_id(recipe.joint_mapping) if recipe.joint_mapping else None
+    if not isinstance(dataset, DatasetManifest):
+        raise TrainingSpikeError("source rotation recipe references an invalid dataset")
+    if mapping is not None and not isinstance(mapping, JointMappingManifest):
+        raise TrainingSpikeError("source rotation recipe references an invalid joint mapping")
+    animation_enabled = bool(
+        mapping is not None
+        and mapping.mapping.status == "validated"
+        and mapping.mapping.animate_in_rerun
+    )
+    discovery = _read_json(run_dir / "discovery.json")
+    data_receipt = _read_json(run_dir / "data-receipt.json")
+    description = discovery["robot"]["description"]["data"]
+    urdf_path = run_dir / "robot" / description["entrypointPath"]
+    if not urdf_path.exists():
+        raise TrainingSpikeError(f"completed-run URDF is missing: {urdf_path}")
+
+    effective_steps = max_steps or recipe.training.max_steps
+    effective_smoke_steps = smoke_test_steps or recipe.training.smoke_test_steps
+    device = select_device(recipe.training.local_devices)
+    primary_source = recipe.training.subset.test_member_roots[0]
+    folds = [
+        _rotation_fold_entry(
+            test_source=primary_source,
+            reused_existing_run=True,
+            result=primary_result,
+            evaluation=primary_evaluation,
+            training=primary_training,
+        )
+    ]
+    cache_receipt_sha = _sha256(cache_receipt_path)
+    rotation_root = run_dir / "source-rotation"
+
+    cached_by_id = {episode.episode_id: episode for episode in cached_episodes}
+    for fold_index, test_source in enumerate(member_roots):
+        if test_source == primary_source:
+            continue
+        fold_dir = rotation_root / f"fold-{fold_index:02d}"
+        expected_config = {
+            "recipeId": recipe.id,
+            "testSource": test_source,
+            "sourceMembers": member_roots,
+            "featureCacheReceiptSha256": cache_receipt_sha,
+            "uvLockSha256": _sha256(repository_root() / "uv.lock"),
+            "effectiveSteps": effective_steps,
+            "effectiveSmokeTestSteps": effective_smoke_steps,
+            "seed": recipe.training.seed,
+        }
+        config_path = fold_dir / "config.json"
+        if config_path.exists() and _read_json(config_path) != expected_config:
+            raise TrainingSpikeError(
+                f"source-rotation fold config changed; use a new run directory: {fold_dir}"
+            )
+        result_path = fold_dir / "result.json"
+        if result_path.exists():
+            fold_result = _read_json(result_path)
+            if fold_result.get("status") != "complete":
+                raise TrainingSpikeError(f"incomplete persisted fold result: {result_path}")
+            folds.append(
+                _rotation_fold_entry(
+                    test_source=test_source,
+                    reused_existing_run=True,
+                    result=fold_result,
+                    evaluation=_read_json(fold_dir / "evaluation.json"),
+                    training=_read_json(fold_dir / "training.json"),
+                )
+            )
+            continue
+        _write_json(config_path, expected_config)
+
+        split = split_source_held_out_episode_ids(
+            cached_episodes,  # type: ignore[arg-type]
+            test_source_members=[test_source],
+            seed=recipe.training.seed,
+            train_fraction=recipe.mixture.split.train_fraction,
+            validation_fraction=recipe.mixture.split.validation_fraction,
+        )
+        train_episodes = [cached_by_id[identifier] for identifier in split["train"]]
+        validation_episodes = [
+            cached_by_id[identifier] for identifier in split["validation"]
+        ]
+        test_episodes = [cached_by_id[identifier] for identifier in split["test"]]
+        normalization = _cached_normalization(train_episodes)
+        _write_json(fold_dir / "split.json", split)
+        _write_json(fold_dir / "normalization.json", normalization.to_json())
+
+        subset = recipe.training.subset.model_copy(
+            update={"test_member_roots": [test_source]}
+        )
+        fold_recipe = recipe.model_copy(
+            update={
+                "training": recipe.training.model_copy(update={"subset": subset})
+            }
+        )
+        train_refs = visual_window_refs(
+            train_episodes,
+            vision.context_frames,
+            vision.training_rollout_horizon,
+        )
+        smoke = _smoke_test(
+            recipe=fold_recipe,
+            episodes=train_episodes,
+            refs=train_refs,
+            normalization=normalization,
+            device=device,
+            steps=effective_smoke_steps,
+        )
+        _write_json(fold_dir / "smoke-test.json", smoke)
+        model, training = _train(
+            recipe=fold_recipe,
+            episodes=train_episodes,
+            refs=train_refs,
+            normalization=normalization,
+            device=device,
+            steps=effective_steps,
+            checkpoint_dir=fold_dir / "checkpoints",
+        )
+        _write_json(fold_dir / "training.json", training)
+        validation_metrics = _evaluate(
+            model=model,
+            episodes=validation_episodes,
+            normalization=normalization,
+            context_frames=vision.context_frames,
+            horizons=recipe.evaluation.rollout_horizons,
+            device=device,
+        )
+        test_metrics = _evaluate(
+            model=model,
+            episodes=test_episodes,
+            normalization=normalization,
+            context_frames=vision.context_frames,
+            horizons=recipe.evaluation.rollout_horizons,
+            device=device,
+        )
+        actual_states, predicted_states, predicted_frames, rollout_start = (
+            _visual_rollout(
+                model=model,
+                episode=test_episodes[0],
+                normalization=normalization,
+                context_frames=vision.context_frames,
+                device=device,
+            )
+        )
+        actual_frames = test_episodes[0].frames[
+            rollout_start : rollout_start + len(predicted_frames)
+        ]
+        preview_path = _write_rollout_preview(
+            output_path=fold_dir / "visual-rollout-preview.png",
+            actual_frames=actual_frames,
+            predicted_frames=predicted_frames,
+        )
+        provenance = {
+            "recipeId": recipe.id,
+            "sourceRotation": True,
+            "testSource": test_source,
+            "sourceMembers": member_roots,
+            "featureCacheReceiptSha256": cache_receipt_sha,
+            "datasetWref": discovery["dataset"]["dataset"]["pinnedWref"],
+            "robotWref": discovery["robot"]["robot"]["pinnedWref"],
+            "upstreamDatasetRevision": data_receipt["source_revision"],
+            "datasetContentSha256": data_receipt["content_sha256"],
+            "checkpointSha256": training["checkpointSha256"],
+            "uvLockSha256": _sha256(repository_root() / "uv.lock"),
+            "git": _git_receipt(),
+            "device": device,
+            "seed": recipe.training.seed,
+            "split": split,
+            "camera": vision.camera,
+            "visualRolloutEpisode": test_episodes[0].episode_id,
+            "visualRolloutStartFrame": rollout_start,
+        }
+        rerun_path, animation = write_state_evaluation(
+            output_path=fold_dir / "evaluation.rrd",
+            run_id=f"{run_dir.name}-source-fold-{fold_index:02d}",
+            joint_names=dataset.episode_schema.state.names,
+            actual_states=actual_states.tolist(),
+            predicted_states=predicted_states.tolist(),
+            metrics=test_metrics,
+            provenance=provenance,
+            urdf_path=urdf_path,
+            joint_mapping=(
+                mapping.mapping.entries
+                if animation_enabled and mapping is not None
+                else None
+            ),
+            unmapped_features=(
+                mapping.mapping.unmapped_features
+                if animation_enabled and mapping is not None
+                else ()
+            ),
+            out_of_range_policy=(
+                mapping.mapping.out_of_range_policy
+                if animation_enabled and mapping is not None
+                else "reject"
+            ),
+            actual_images=list(actual_frames),
+            predicted_images=list(predicted_frames),
+        )
+        evaluation = {
+            "validation": validation_metrics,
+            "test": test_metrics,
+            "rerun": str(rerun_path),
+            "rerunSha256": _sha256(rerun_path),
+            "preview": str(preview_path),
+            "previewSha256": _sha256(preview_path),
+            "urdfAnimation": animation,
+        }
+        _write_json(fold_dir / "evaluation.json", evaluation)
+        fold_result = {
+            "status": "complete",
+            "runDir": str(fold_dir),
+            "device": device,
+            "testSource": test_source,
+            "episodes": {
+                "train": len(train_episodes),
+                "validation": len(validation_episodes),
+                "test": len(test_episodes),
+            },
+            "visualWindows": {
+                "train": len(train_refs),
+                "validation": len(
+                    visual_window_refs(validation_episodes, vision.context_frames)
+                ),
+                "test": len(
+                    visual_window_refs(test_episodes, vision.context_frames)
+                ),
+            },
+            "smokeTest": smoke,
+            "training": training,
+            "testMetrics": test_metrics,
+            "rerun": str(rerun_path),
+            "preview": str(preview_path),
+        }
+        _write_json(result_path, fold_result)
+        folds.append(
+            _rotation_fold_entry(
+                test_source=test_source,
+                reused_existing_run=False,
+                result=fold_result,
+                evaluation=evaluation,
+                training=training,
+            )
+        )
+
+    ordered_folds = sorted(
+        folds,
+        key=lambda fold: member_roots.index(str(fold["testSource"])),
+    )
+    contact_sheet = _write_source_rotation_contact_sheet(
+        folds=ordered_folds,
+        output_path=rotation_root / "visual-rollouts.png",
+    )
+    summary = {
+        "status": "complete",
+        "recipeId": recipe.id,
+        "device": device,
+        "sourceMembers": member_roots,
+        "dataReceipt": str(run_dir / "data-receipt.json"),
+        "selectedDatasetBytesReused": int(data_receipt["bytes_written"]),
+        "featureCacheReceipt": str(cache_receipt_path),
+        "featureCacheReceiptSha256": cache_receipt_sha,
+        "featureCacheBytesReused": verified_cache_bytes,
+        "newDatasetBytesDownloaded": 0,
+        "newFeatureCacheBytesWritten": 0,
+        "folds": ordered_folds,
+        "aggregate": _source_rotation_aggregate(ordered_folds),
+        "contactSheet": str(contact_sheet),
+        "contactSheetSha256": _sha256(contact_sheet),
+    }
+    _write_json(rotation_root / "source-rotation.json", summary)
+    return summary
 
 
 def run_visual_recipe(

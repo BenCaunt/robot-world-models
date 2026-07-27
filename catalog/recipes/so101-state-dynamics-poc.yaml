@@ -11,7 +11,7 @@ mixture:
   datasets:
     - nashmo-so101
   robot: so-arm101
-  sampling: episode-uniform
+  sampling: uniform over eligible within-episode transitions
   missing_modality_policy: reject-required
   normalization: per-feature-training-split
   split:

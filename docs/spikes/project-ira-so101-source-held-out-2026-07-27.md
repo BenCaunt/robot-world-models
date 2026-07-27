@@ -7,11 +7,12 @@ LeRobot collection through splitting, feature caching, evaluation, and Rerun pro
 development members contributed nine training episodes and one validation episode each. All ten
 episodes from the yellow-plate member were excluded from training, validation, and normalization.
 
-On that unseen member, the model beat visual persistence by 26.5%, but replacing the real action
-with the training-mean action worsened error by only 5.7%. The model therefore generalizes some
-visual dynamics across recording sources, but its action conditioning does not yet pass the
-repository's promotion gate. This result argues for rotating the held-out member and improving
-source coverage before scaling the architecture or renting a GPU.
+The initial yellow-plate holdout beat visual persistence by 26.5%, but replacing the real action
+with the training-mean action worsened error by only 5.7%. Rotating every member through the test
+role then showed action benefits of 8.8% on red, 15.5% on green variation, 9.6% on multi-color, and
+5.7% on yellow plate. Every fold beat persistence, but the action response remains source-dependent
+and below the earlier 20.2% five-episode control. Improve source coverage and sampling before
+scaling the architecture or renting a GPU.
 
 ## Exact data and storage boundary
 
@@ -51,6 +52,11 @@ episodes from a member; the development-member rows below include training data 
 read as held-out generalization estimates. Their purpose is to expose source-dependent persistence
 and action sensitivity.
 
+The rotation command reuses the completed primary fold, verifies the encoder/camera contract and
+all 40 cache checksums, then trains only the three missing folds. Each fold has its own training
+normalization, split, checkpoint, metrics, preview, and Rerun recording. Completed folds are
+resumable.
+
 ## Result
 
 The 1,997,737-parameter tokenwise MLP passed the 30-step overfit smoke test and trained for 1,000
@@ -80,10 +86,34 @@ improvement from action, but its test episodes came from a member also present i
 26.5% and 5.7% source-held-out results show why that random split was insufficient. The comparison
 is diagnostic rather than a controlled data ablation because the development mixture also changed.
 
-The absolute action gap is similar across the four members, roughly 0.0012–0.0013, while the
-held-out model error is 57% higher than the development-member errors. Action signal survives the
-source shift, but source mismatch dominates enough of the error budget that the relative action
-benefit falls below the architecture gate.
+Within the primary model's all-member diagnostic, the absolute action gap is similar across the
+four members, roughly 0.0012–0.0013, while the held-out model error is 57% higher than the
+development-member errors. Action signal survives the source shift, but source mismatch dominates
+enough of the error budget that the relative action benefit falls below the architecture gate.
+
+## Four-fold rotation
+
+The three additional folds each trained for 1,000 MPS steps in approximately 77 seconds. They
+reused 103,190,662 selected dataset bytes and the 880,164,532-byte visual cache. The rotation wrote
+zero new dataset bytes and zero new feature-cache bytes; its 388 MB of new local artifacts are
+checkpoints, metrics, previews, and Rerun recordings.
+
+| Held-out source | Visual windows | Model error | Persistence | Better than persistence | Mean-action ablation | Better with real action | H5 | H10 |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| Red | 6,911 | 0.01579 | 0.03252 | 51.4% | 0.01732 | 8.8% | 0.07398 | 0.09574 |
+| Green variation | 9,114 | 0.01694 | 0.03372 | 49.7% | 0.02005 | 15.5% | 0.09335 | 0.12381 |
+| Multi-color | 14,047 | 0.01653 | 0.03276 | 49.5% | 0.01828 | 9.6% | 0.08227 | 0.09905 |
+| Yellow plate | 5,548 | 0.02168 | 0.02951 | 26.5% | 0.02300 | 5.7% | 0.11708 | 0.14153 |
+
+Across 35,620 held-out visual windows, the window-weighted model error was 0.01729, improvement
+over persistence was 46.4%, and improvement from real action was 10.4%. All four folds benefited
+from action, so the predictor is not universally ignoring control. Yellow plate is the hardest
+source by one-step and rollout error and has the weakest relative action benefit.
+
+The actual sampler is uniform over eligible visual windows, not uniform over episodes or sources.
+Because member lengths range from 5,578 to 14,077 frames, longer development sources receive more
+training draws. Every fold used the same policy, so the rotation is internally comparable, but a
+source-balanced sampler is the next controlled data-side change.
 
 ## Rerun and visual check
 
@@ -92,6 +122,12 @@ actual/predicted/error images, the aggregate and per-member metric receipt, and 
 transform rows for each of the actual and predicted robots: five mapped joints over 30 steps.
 For example, actual shoulder pan moves from -1.040 radians at step 0 to -0.093 at step 29, while
 the predicted trajectory moves from -1.045 to -0.112. The gripper remains explicitly unmapped.
+
+All three additional fold recordings also pass `rerun rrd verify`. The combined contact sheet
+shows that red, green variation, and multi-color share a similar calibration-board composition,
+while yellow plate includes a distinctly positioned, highly visible robot arm. The single yellow
+result was therefore a real domain-shift warning, not evidence that every source generalized
+equally poorly.
 
 The preview is honest but coarse. It captures large color regions and motion trend while blurring
 the arm and calibration-board detail. Decoder-oracle MAE is already 0.06678, close to the predicted
@@ -104,14 +140,20 @@ mixed into the next source-generalization test.
 uv sync --extra train --extra lerobot --extra vision
 uv run rwm train project-ira-so101-dinov2-source-held-out-poc \
   --run-dir runs/project-ira-so101-source-held-out-poc
+uv run rwm evaluate source-rotation \
+  project-ira-so101-dinov2-source-held-out-poc \
+  --run-dir runs/project-ira-so101-source-held-out-poc
 uv run rerun rrd verify runs/project-ira-so101-source-held-out-poc/evaluation.rrd
 uv run rerun runs/project-ira-so101-source-held-out-poc/evaluation.rrd
 ```
 
 ## Decision
 
-Keep this recipe as the source-leakage regression and keep the tokenwise MLP as the control. Do not
-scale it to RunPod yet. The next worthwhile experiment is four-fold member rotation using the same
-downloaded bytes and reusable feature cache, so each member becomes the complete test source once.
-That will distinguish a generally weak source-invariance problem from a yellow-plate-specific
-domain shift without increasing WarmHub or upstream transfer size.
+Keep this recipe and rotation command as the source-leakage regression, and keep the tokenwise MLP
+as the control. Do not scale it to RunPod yet. The rotation distinguishes a yellow-plate-specific
+domain shift from universal failure, but its 5.7–15.5% action benefit remains inconsistent.
+
+The next worthwhile experiment is a source-balanced sampler using the same data, cache,
+architecture, and four-fold assignment. If that does not narrow the fold spread, add another
+plate-layout development member and hold out a different plate member. Both steps target the
+observed domain-coverage problem before adding model capacity.

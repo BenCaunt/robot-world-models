@@ -9,7 +9,7 @@
       "huggingface-hub"
     ]
   },
-  "contentSha256": "704d3eb3e8680664bd679c1f82ac2f482c58bf333ea2a03a4f958a8a97b1dedb",
+  "contentSha256": "c88a143b1164a12d91ba1b79304a89865f4bb0301b0e3e96191b33a590b6394f",
   "entries": [
     {
       "manifest": {
@@ -570,7 +570,7 @@
           "missing_modality_policy": "reject-required",
           "normalization": "per-feature-training-split for state and action; L2-normalized visual tokens",
           "robot": "so-arm101",
-          "sampling": "episode-uniform windows from three development members; one complete member held out",
+          "sampling": "uniform over eligible visual windows from three development members; one complete member held out",
           "split": {
             "test_fraction": 0.25,
             "train_fraction": 0.675,
@@ -710,7 +710,7 @@
           "missing_modality_policy": "reject-required",
           "normalization": "per-feature-training-split for state and action; L2-normalized visual tokens",
           "robot": "so-arm101",
-          "sampling": "episode-uniform windows from two action-diverse collection members",
+          "sampling": "uniform over eligible visual windows from two action-diverse collection members",
           "split": {
             "test_fraction": 0.2,
             "train_fraction": 0.6,
@@ -848,7 +848,7 @@
           "missing_modality_policy": "reject-required",
           "normalization": "per-feature-training-split for state and action; L2-normalized visual tokens",
           "robot": "so-arm101",
-          "sampling": "episode-uniform five-step windows",
+          "sampling": "uniform over eligible within-episode five-step visual windows",
           "split": {
             "test_fraction": 0.2,
             "train_fraction": 0.6,
@@ -981,7 +981,7 @@
           "missing_modality_policy": "reject-required",
           "normalization": "per-feature-training-split for state and action; L2-normalized visual tokens",
           "robot": "so-arm101",
-          "sampling": "episode-uniform windows",
+          "sampling": "uniform over eligible within-episode visual windows",
           "split": {
             "test_fraction": 0.2,
             "train_fraction": 0.6,
@@ -1113,7 +1113,7 @@
           "missing_modality_policy": "reject-required",
           "normalization": "per-feature-training-split for state and action; L2-normalized visual tokens",
           "robot": "so-arm101",
-          "sampling": "episode-uniform windows",
+          "sampling": "uniform over eligible within-episode visual windows",
           "split": {
             "test_fraction": 0.2,
             "train_fraction": 0.6,
@@ -1246,7 +1246,7 @@
           "missing_modality_policy": "reject-required",
           "normalization": "per-feature-training-split for state and action; L2-normalized visual tokens",
           "robot": "so-arm101",
-          "sampling": "episode-uniform five-step windows",
+          "sampling": "uniform over eligible within-episode five-step visual windows",
           "split": {
             "test_fraction": 0.2,
             "train_fraction": 0.6,
@@ -1378,7 +1378,7 @@
           "missing_modality_policy": "reject-required",
           "normalization": "per-feature-training-split for state and action; L2-normalized visual tokens",
           "robot": "so-arm101",
-          "sampling": "episode-uniform windows",
+          "sampling": "uniform over eligible within-episode visual windows",
           "split": {
             "test_fraction": 0.2,
             "train_fraction": 0.6,
@@ -1507,7 +1507,7 @@
           "missing_modality_policy": "reject-required",
           "normalization": "per-feature-training-split",
           "robot": "so-arm101",
-          "sampling": "episode-uniform",
+          "sampling": "uniform over eligible within-episode transitions",
           "split": {
             "test_fraction": 0.1,
             "train_fraction": 0.8,

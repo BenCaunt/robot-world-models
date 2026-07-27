@@ -11,7 +11,7 @@ mixture:
   datasets:
     - project-ira-so101-lego
   robot: so-arm101
-  sampling: episode-uniform windows from three development members; one complete member held out
+  sampling: uniform over eligible visual windows from three development members; one complete member held out
   missing_modality_policy: reject-required
   normalization: per-feature-training-split for state and action; L2-normalized visual tokens
   split:

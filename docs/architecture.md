@@ -69,6 +69,13 @@ selecting episode-held-out validation examples independently inside each develop
 Per-member persistence and training-mean-action ablations are evaluation outputs, not ad hoc
 analysis scripts.
 
+`rwm evaluate source-rotation` consumes a completed primary run rather than rematerializing its
+inputs. It verifies the encoder/camera contract and every cache checksum, then gives each selected
+member a fold directory with its own normalization, checkpoints, metrics, preview, and Rerun
+recording. A completed fold is reusable; an interrupted fold can restart without invalidating
+siblings. The rotation summary separately records selected dataset bytes reused, feature-cache
+bytes reused, and newly written dataset/cache bytes.
+
 The visual spike adds a third boundary: a visual-feature cache owns the relationship between one
 decoded camera frame, the frozen encoder's exact processed view, its spatial latent tokens, and the
 RGB reconstruction target. The dynamics model consumes that cache without importing a source or

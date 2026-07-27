@@ -31,6 +31,7 @@ The first local spike is executable and provides:
   contracts;
 - source-held-out collection splits with source identity preserved on canonical episodes and
   per-member persistence/action-ablation reports;
+- resumable source-holdout rotation that verifies and reuses one visual cache across folds;
 - reusable AV1 video materialization, exact frame alignment, and revisioned visual-feature caches;
 - mandatory Rerun evaluation output, including separated actual/predicted URDF animation for
   validated joint transforms and actual/predicted RGB for visual recipes;
@@ -86,6 +87,16 @@ test-only. The selected desk-view payload is exactly 103,190,662 bytes under a 1
 uv run rwm train project-ira-so101-dinov2-source-held-out-poc \
   --run-dir runs/project-ira-so101-source-held-out-poc
 uv run rerun runs/project-ira-so101-source-held-out-poc/evaluation.rrd
+```
+
+Here, 105 MB is a pre-download ceiling for the selected upstream files—not a WarmHub limit and not
+the size of the derived feature cache. Rotate all four members through the test role without
+downloading or encoding them again:
+
+```bash
+uv run rwm evaluate source-rotation \
+  project-ira-so101-dinov2-source-held-out-poc \
+  --run-dir runs/project-ira-so101-source-held-out-poc
 ```
 
 Start an agent with [`prompts/create-world-model.md`](prompts/create-world-model.md). The agent
@@ -147,10 +158,10 @@ the new LeRobot v3 adapter. It beat persistence by 60.3% and retained a 16.8% me
 gap, but did not improve on the earlier control's 20.2% relative action gap. See
 [`docs/spikes/project-ira-so101-visual-2026-07-27.md`](docs/spikes/project-ira-so101-visual-2026-07-27.md).
 
-A four-member follow-up then held every yellow-plate episode out of training and normalization.
-The unseen source still beat persistence by 26.5%, but real actions improved over the training-mean
-ablation by only 5.7%, versus 7.7–8.8% on the development members. This exposes a material
-source-generalization gap and does not justify remote scaling yet. See
+A four-member follow-up rotated each source through a complete held-out test. Every fold beat
+persistence; real-action benefit was 8.8% for red, 15.5% for green variation, 9.6% for multi-color,
+and 5.7% for yellow plate, with a 10.4% window-weighted mean. Yellow plate is a specific visual
+domain shift, while action conditioning remains too inconsistent to justify remote scaling. See
 [`docs/spikes/project-ira-so101-source-held-out-2026-07-27.md`](docs/spikes/project-ira-so101-source-held-out-2026-07-27.md).
 
 ## Status
@@ -160,7 +171,8 @@ evaluation, one-camera visual-latent training, cached DINOv2 features, and actua
 images plus five-joint URDF animation are implemented. Controlled representation ablation and
 five-step visual training are also implemented. Nested LeRobot v3 collections can select exact
 members, slice shared video by episode, enforce a pre-download byte ceiling, and hold a complete
-member out of training and normalization. The spatial-transformer path is implemented and tested,
-but remains experimental because its tiny-data run mostly ignored action. Task-relevant metrics,
-sharper reconstruction, the SO-101 gripper transform, and paid RunPod provisioning remain future
-milestones. The RunPod CLI remains intentionally plan-only.
+member out of training and normalization. Completed visual caches can be checksum-verified and
+reused for resumable source-holdout rotation. The spatial-transformer path is implemented and
+tested, but remains experimental because its tiny-data run mostly ignored action. Source-balanced
+sampling, task-relevant metrics, sharper reconstruction, the SO-101 gripper transform, and paid
+RunPod provisioning remain future milestones. The RunPod CLI remains intentionally plan-only.

@@ -1,6 +1,6 @@
 # Robot World Models Specification
 
-Status: draft v0.7 — bounded SO-101 source-held-out visual evaluation implemented
+Status: draft v0.8 — resumable SO-101 source-holdout rotation implemented
 
 ## 1. Purpose
 
@@ -169,16 +169,25 @@ an older dataset does not require an upstream conversion when a bounded, tested 
 the immutable format directly.
 
 Collection datasets declare their complete reviewed member set and exclusions in the dataset
-manifest. Recipes select exact members and a fail-closed byte ceiling. When a format stores many
-episodes in one Parquet or video chunk, the format adapter owns episode slicing and alignment; the
-source adapter still transfers only the approved chunks. WarmHub stores the aggregate facts and
-relationships, never those chunks.
+manifest. Recipes select exact members and a fail-closed byte ceiling for the selected upstream
+transfer. That ceiling is distinct from total upstream size, local feature-cache size, checkpoint
+storage, and WarmHub payload size. When a format stores many episodes in one Parquet or video
+chunk, the format adapter owns episode slicing and alignment; the source adapter still transfers
+only the approved chunks. WarmHub stores the aggregate facts and relationships, never those
+chunks.
 
 A source-held-out recipe explicitly names its test member roots. Every episode from those members
 is excluded from training, validation, and normalization. When the remaining development members
 also need validation coverage, validation episodes are selected independently within each
 development member; the resulting receipt distinguishes this episode-held-out validation from the
 complete source-held-out test.
+
+When one bounded collection contains several candidate sources, the evaluator can rotate each
+member through the complete test role. Rotation verifies the completed cache contract and every
+cache checksum, reuses the original data and features, fits normalization separately on each
+fold's training episodes, and writes independently resumable checkpoints, metrics, previews, and
+Rerun recordings. A single held-out member may reveal leakage, but rotation is required before
+generalizing its difficulty to the whole mixture.
 
 For a new dataset, the normal contribution is a manifest, fixture, and contract test. A new source
 adapter is justified only by a new transport or authentication method; a new format adapter is
@@ -507,6 +516,15 @@ cosine error by 26.5% over persistence but only 5.7% over replacing action with 
 The run therefore passes the passive-continuity baseline but not the action-sensitivity promotion
 gate. Its 839.4 MiB local feature cache and all training/Rerun artifacts remain outside WarmHub.
 
+Rotating all four members through the test role reused the same 103,190,662 selected dataset bytes
+and 880,164,532 cache bytes, with zero new dataset download and zero new feature-cache bytes.
+Every fold beat persistence. Real actions improved over the training-mean ablation by 8.8% on red,
+15.5% on green variation, 9.6% on multi-color, and 5.7% on yellow plate; the visual-window-weighted
+mean was 10.4%. The contact sheet isolates yellow plate as a distinct camera/task composition, but
+the variable action gap still does not justify architecture scaling. The executable sampler is
+uniform over eligible visual windows, so longer sources carry more training weight; source-balanced
+sampling remains a separate controlled experiment.
+
 ## 6. Completion criteria
 
 The local milestone is complete:
@@ -519,6 +537,8 @@ The local milestone is complete:
   one-step visual control;
 - a complete collection member is held out from visual training and normalization, with
   persistence and action-ablation metrics reported per member;
+- every member in the bounded four-source slice is rotated through the complete held-out role
+  without duplicating dataset or feature-cache storage;
 - Rerun verifies metrics, actual/predicted trajectories, and dynamic SO-101 arm poses;
 - the implementation leaves a reusable contribution path.
 
