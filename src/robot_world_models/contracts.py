@@ -138,18 +138,37 @@ class RobotModelProfile(ContractModel):
     has_collision_geometry: bool
 
 
+class JointTransform(ContractModel):
+    urdf_joint: str
+    scale: float
+    offset: float
+    evidence: list[str] = Field(min_length=1)
+
+
 class JointMapping(ContractModel):
     status: Literal["provisional", "validated"]
+    coverage: Literal["partial", "complete"]
     animate_in_rerun: bool
     dataset_units: str
     urdf_units: str
-    entries: dict[str, str]
+    out_of_range_policy: Literal["clamp", "reject"]
+    entries: dict[str, JointTransform] = Field(min_length=1)
+    unmapped_features: list[str] = Field(default_factory=list)
     validation_required: list[str]
 
     @model_validator(mode="after")
     def prevent_unvalidated_animation(self) -> JointMapping:
         if self.animate_in_rerun and self.status != "validated":
             raise ValueError("Rerun animation requires a validated joint mapping")
+        if self.coverage == "complete" and self.unmapped_features:
+            raise ValueError("complete mappings cannot declare unmapped features")
+        if self.coverage == "partial" and not self.unmapped_features:
+            raise ValueError("partial mappings must declare unmapped features")
+        if set(self.entries) & set(self.unmapped_features):
+            raise ValueError("a feature cannot be both mapped and unmapped")
+        urdf_joints = [entry.urdf_joint for entry in self.entries.values()]
+        if len(set(urdf_joints)) != len(urdf_joints):
+            raise ValueError("each mapped feature must target a distinct URDF joint")
         return self
 
 

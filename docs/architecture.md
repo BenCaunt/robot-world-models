@@ -28,7 +28,7 @@ flowchart LR
 | --- | --- | --- |
 | WarmHub discovery | identity, relationships, evidence, provenance, URLs | bulk payload bytes |
 | Dataset manifest | declarative mapping and compatibility | transport implementation |
-| Dataset-robot mapping | feature/joint names, units, offsets, signs, validation status | global robot identity |
+| Dataset-robot mapping | feature/joint names, affine transforms, units, coverage, evidence, validation status | global robot identity |
 | Source adapter | download, authentication, resume, checksum | dataset schema |
 | Format adapter | source layout to canonical episodes | recipe-specific training |
 | Recipe | mixture, modalities, model and evaluation contract | one-off extraction logic |

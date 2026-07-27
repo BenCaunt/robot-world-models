@@ -609,16 +609,22 @@ def _run_recipe(
         "seed": recipe.training.seed,
         "split": split,
         "mappingStatus": mapping.mapping.status if mapping else "absent",
+        "mappingCoverage": mapping.mapping.coverage if mapping else "absent",
         "datasetStateUnits": dataset.episode_schema.state.units,
         "datasetActionUnits": dataset.episode_schema.action.units,
         "skippedMetrics": {
-            "joint_limit_violation_rate": (
-                "dataset units, offsets, signs, and URDF joint mapping are not validated"
+            "gripper_joint_limit_violation_rate": (
+                "the LeRobot 0-100 gripper command is not yet mapped to the URDF jaw angle"
             )
         },
     }
     display_count = min(300, len(test_predictions))
-    rerun_path = write_state_evaluation(
+    animation_enabled = bool(
+        mapping is not None
+        and mapping.mapping.status == "validated"
+        and mapping.mapping.animate_in_rerun
+    )
+    rerun_path, animation = write_state_evaluation(
         output_path=run_dir / "evaluation.rrd",
         run_id=run_dir.name,
         joint_names=dataset.episode_schema.state.names,
@@ -627,10 +633,16 @@ def _run_recipe(
         metrics=test_metrics,
         provenance=provenance,
         urdf_path=urdf_path,
-        validated_joint_mapping=(
-            mapping.mapping.entries
-            if mapping is not None and mapping.mapping.status == "validated"
-            else None
+        joint_mapping=mapping.mapping.entries
+        if animation_enabled and mapping is not None
+        else None,
+        unmapped_features=(
+            mapping.mapping.unmapped_features if animation_enabled and mapping is not None else ()
+        ),
+        out_of_range_policy=(
+            mapping.mapping.out_of_range_policy
+            if animation_enabled and mapping is not None
+            else "reject"
         ),
     )
     evaluation = {
@@ -645,6 +657,7 @@ def _run_recipe(
         "rerun": str(rerun_path),
         "rerunSha256": _sha256(rerun_path),
         "rerunFrames": display_count,
+        "urdfAnimation": animation,
     }
     _write_json(run_dir / "evaluation.json", evaluation)
     result = {

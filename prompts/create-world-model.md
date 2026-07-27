@@ -22,7 +22,9 @@ large download before I approve the data plan.
 7. Train a bounded proof of concept locally with uv on MPS, CUDA, or CPU. Start with an overfit smoke
    test and compare against a naive baseline.
 8. Evaluate with Rerun. Produce an `.rrd` containing observations, predictions, metrics,
-   provenance, and the WarmHub-resolved URDF when the joint mapping is validated.
+   provenance, and the WarmHub-resolved URDF. Animate validated mapping entries, display any
+   explicitly unmapped joints, and prove motion by checking temporal `Transform3D` rows plus two
+   visibly different timeline steps. A static URDF import is not a completed motion evaluation.
 9. Review the local result with me. Only if remote compute is justified, follow
    `prompts/runpod-gpu.md`.
 10. End with reproducible commands, artifact paths, caveats, and the modular contribution that future
@@ -31,5 +33,7 @@ large download before I approve the data plan.
 For an implemented homogeneous recipe, prefer `uv run rwm train <recipe-id> --run-dir
 runs/<run-id>` over recipe-specific scripts. Treat feature-to-URDF semantics as a dataset-to-robot
 mapping capability and skip physical metrics while it remains provisional.
+Validated partial mappings may animate only their covered joints; never infer a missing actuator
+conversion just to make every mesh move.
 
 Never ask me to paste an API key into chat. Never treat possession of a key as approval to spend.

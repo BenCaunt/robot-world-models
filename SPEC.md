@@ -228,8 +228,15 @@ Rerun entity paths should separate observed and predicted worlds. For URDF:
 
 - log the description as static geometry;
 - use distinct entity/frame prefixes for observed and predicted robots;
+- separate or tint observed and predicted geometry so overlap cannot conceal behavior;
 - animate joints only after mapping names, order, units, zero offsets, and limits;
 - log a visible warning instead of an animation when mapping is uncertain.
+- permit validated partial animation only when omitted features are explicit and stay at the URDF
+  default.
+
+Verification must establish that the recording contains timeline-indexed dynamic `Transform3D`
+rows for both actual and predicted robots and that at least two inspected steps show different
+poses. A valid `.rrd` containing only static URDF geometry does not pass this gate.
 
 Minimum state-model metrics:
 
@@ -341,14 +348,18 @@ One file under `catalog/robots/` identifies:
 One file under `catalog/mappings/` binds one dataset manifest to one robot manifest and records:
 
 - semantic feature-to-joint correspondence;
-- dataset and robot units;
+- dataset and robot units plus the explicit numeric transform between them;
+- complete or partial coverage and explicit unmapped features;
+- evidence for each animated transform;
+- behavior for converted values outside URDF limits;
 - mapping validation status;
 - required checks for order, offsets, signs, and limits;
 - whether Rerun animation is permitted.
 
 Mappings are not robot-global because datasets for the same embodiment can use different feature
 names and numeric conventions. A provisional mapping can preserve evidence, but schema validation
-prevents it from enabling animation.
+prevents it from enabling animation. A validated partial mapping can animate its covered joints
+without inventing conversions for the remainder.
 
 ### Recipe manifest
 
@@ -389,8 +400,10 @@ Curated from live WarmHub reads on 2026-07-27:
 
 Because the robot link is high-confidence alias evidence rather than an exact catalog identifier,
 the first plan must show it to the user for confirmation. The URDF joint names are numeric while the
-dataset uses semantic feature names; the initial mapping is provisional until values, units, offsets,
-and limits are checked against real frames.
+dataset uses semantic feature names. The five arm joints now use LeRobot's documented legacy-to-new
+calibration conversion followed by degrees-to-radians conversion. The gripper remains explicitly
+unmapped because the upstream robot package says its LeRobot 0-100 mapping is not reflected in the
+URDF or MJCF.
 
 The originally selected `qb1t/so101-teleop-cubes` record remains in the catalog as useful evidence,
 but its pinned Hugging Face source returned 401/repository-not-found during materialization. The
@@ -400,8 +413,10 @@ substitute an unregistered source.
 The first complete MPS run used an 8/1/1 episode split, 8,089 training transitions, a 100-step
 overfit smoke test, and 2,000 training steps. Training took about 3 seconds. Held-out one-step MSE was
 0.0719 versus 0.3553 for persistence; open-loop MSE grew from 0.0726 at one step to 0.733 at ten
-steps. Metrics are in the dataset's unverified raw units. Rerun verified the 300-frame
-actual/predicted recording and static WarmHub-resolved URDF without animating the provisional map.
+steps. Model metrics remain in the dataset's raw mixed units. Rerun verifies 300 frames of
+actual/predicted scalar trajectories plus separated, tinted SO-101 robots with dynamic transforms
+for five arm joints. It counts and clamps out-of-limit values for rendering and leaves the
+unmapped gripper at its URDF default.
 
 ## 6. Completion criteria
 
@@ -411,7 +426,7 @@ The local milestone is complete:
 - a bounded LeRobot slice downloads and validates through reusable adapters;
 - the state-dynamics baseline trains on MPS or CUDA;
 - evaluation beats a persistence baseline on held-out episodes;
-- Rerun verifies metrics, actual/predicted trajectories, and the SO-101 URDF;
+- Rerun verifies metrics, actual/predicted trajectories, and dynamic SO-101 arm poses;
 - the implementation leaves a reusable contribution path.
 
 The remote milestone remains open until:

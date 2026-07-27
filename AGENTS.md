@@ -64,6 +64,8 @@ capabilities; it does not own download or extraction logic.
 
 Feature-name, unit, offset, and sign mappings belong to a dataset-to-robot manifest under
 `catalog/mappings/`. Never put a dataset-specific feature map on a global robot manifest.
+Each animated entry must carry an explicit numeric transform and evidence. Partial coverage is
+allowed only when every omitted feature is named and the Rerun recording displays the limitation.
 
 After manifest changes:
 
@@ -107,7 +109,12 @@ Every evaluation must write an `.rrd`.
 - Use the Rerun URDF importer for a URDF resolved from `robot-models`.
 - Only animate joints after validating names, order, units, zero offsets, and limits.
 - Use distinct entity paths and frame prefixes for actual and predicted robots.
+- Separate or visually distinguish actual and predicted geometry so overlap cannot hide motion.
+- Verify dynamic `Transform3D` rows on the evaluation timeline and inspect at least two different
+  steps. Static URDF geometry alone does not satisfy evaluation.
 - When mapping is uncertain, log a visible warning and omit misleading transforms.
+- A validated partial mapping may animate its covered joints while explicitly unmapped joints stay
+  at their URDF defaults.
 
 ## Secrets and RunPod
 

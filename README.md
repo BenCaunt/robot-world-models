@@ -26,7 +26,8 @@ The first local spike is executable and provides:
 - live, Arc-aware discovery across both WarmHub registries;
 - reusable Hugging Face, LeRobot v2.1, and GitHub description adapters;
 - an SO-101 state-dynamics proof-of-concept trainer for MPS, CUDA, and CPU;
-- mandatory Rerun evaluation output, including a WarmHub-resolved URDF when joint semantics permit;
+- mandatory Rerun evaluation output, including separated actual/predicted URDF animation for
+  validated joint transforms;
 - a cost-bounded RunPod planning contract and a separate deployment prompt.
 
 The RunPod path is deliberately plan-only in this milestone: no command creates paid infrastructure
@@ -67,8 +68,8 @@ A new dataset normally contributes:
 4. code only when the source access method or storage format is genuinely new.
 
 A dataset-specific feature-to-URDF mapping belongs in `catalog/mappings/`, not on the robot
-manifest. Provisional mappings can preserve useful evidence, but cannot enable animation or
-joint-limit claims.
+manifest. Mapping entries include the numeric transform and evidence. Provisional mappings cannot
+animate; validated partial mappings may animate covered joints while naming every omitted feature.
 
 Run `uv run rwm catalog build` after adding a manifest. CI rejects invalid manifests and a stale
 `catalog/catalog.json`.
@@ -86,5 +87,6 @@ for the full result, failures, and next experiment.
 ## Status
 
 WarmHub resolution, bounded state-data materialization, local training, checkpointing, baseline
-evaluation, and Rerun output are implemented. Visual training, validated joint animation, and paid
-RunPod provisioning remain future milestones. The RunPod CLI remains intentionally plan-only.
+evaluation, and five-joint actual/predicted Rerun animation are implemented. Visual training, the
+SO-101 gripper transform, and paid RunPod provisioning remain future milestones. The RunPod CLI
+remains intentionally plan-only.

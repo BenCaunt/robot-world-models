@@ -24,6 +24,12 @@ provider documentation before changing dependency pins or implementing paid infr
 - [Rerun URDF support](https://rerun.io/docs/howto/logging-and-ingestion/urdf)
 - [Rerun and LeRobot export](https://rerun.io/docs/howto/train/lerobot_export)
 
+## SO-101 calibration
+
+- [LeRobot backward compatibility](https://huggingface.co/docs/lerobot/main/en/backwardcomp)
+- [LeRobot legacy replay conversion](https://github.com/huggingface/lerobot/blob/main/examples/backward_compatibility/replay.py)
+- [SO-101 simulation calibration notes](https://github.com/TheRobotStudio/SO-ARM100/blob/main/Simulation/SO101/README.md)
+
 ## RunPod
 
 - [RunPod API keys](https://docs.runpod.io/get-started/api-keys)
@@ -33,4 +39,3 @@ provider documentation before changing dependency pins or implementing paid infr
 - [Create a Pod](https://docs.runpod.io/api-reference-v2/pods/create-a-pod)
 - [Manage Pods](https://docs.runpod.io/pods/manage-pods)
 - [Terminate a Pod](https://docs.runpod.io/api-reference-v2/pods/terminate-a-pod)
-

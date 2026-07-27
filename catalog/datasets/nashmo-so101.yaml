@@ -45,7 +45,7 @@ episode_schema:
       - main_wrist_flex
       - main_wrist_roll
       - main_gripper
-    units: unknown-degree-like
+    units: legacy LeRobot degrees for arm joints; normalized 0-100 for gripper
   action:
     dimension: 6
     names:
@@ -55,7 +55,7 @@ episode_schema:
       - main_wrist_flex
       - main_wrist_roll
       - main_gripper
-    units: unknown-degree-like
+    units: legacy LeRobot degrees for arm joints; normalized 0-100 for gripper
   cameras:
     - observation.images.laptop
     - observation.images.phone1
@@ -73,5 +73,8 @@ required_assessments:
 fixture: null
 known_limitations:
   - The dataset-to-robot relationship is alias-derived rather than an exact catalog identifier.
-  - State/action values appear degree-like, but units, offsets, signs, and limits are unverified.
+  - The arm joints use LeRobot's legacy degree convention and require the official old-to-new
+    calibration transform before use with the new-calibration URDF.
+  - The upstream robot package does not define how the LeRobot 0-100 gripper value maps to the URDF
+    jaw angle.
   - The first state-only spike deliberately excludes about 210 MB of optional camera video.

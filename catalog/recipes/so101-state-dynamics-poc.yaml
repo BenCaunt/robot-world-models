@@ -76,5 +76,6 @@ remote_compute:
   explicit_approval_required: true
 known_limitations:
   - This state-only baseline is a pipeline proof, not the final visual world model.
-  - URDF animation and joint-limit metrics remain disabled until the mapping is validated.
+  - Rerun animates the five validated arm joints; the unmapped gripper remains at its URDF default.
+  - Values outside current URDF limits are counted and clamped for rendering.
   - Remote provisioning is intentionally absent until teardown tests pass.

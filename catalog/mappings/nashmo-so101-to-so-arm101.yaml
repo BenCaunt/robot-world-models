@@ -5,22 +5,61 @@ display_name: nashmo SO-101 features to SO-ARM101 URDF joints
 dataset: nashmo-so101
 robot: so-arm101
 mapping:
-  status: provisional
-  animate_in_rerun: false
-  dataset_units: unknown-degree-like
+  status: validated
+  coverage: partial
+  animate_in_rerun: true
+  dataset_units: legacy LeRobot degrees for arm joints; normalized 0-100 for gripper
   urdf_units: radians
+  out_of_range_policy: clamp
   entries:
-    main_shoulder_pan: "1"
-    main_shoulder_lift: "2"
-    main_elbow_flex: "3"
-    main_wrist_flex: "4"
-    main_wrist_roll: "5"
-    main_gripper: "6"
+    main_shoulder_pan:
+      urdf_joint: "1"
+      scale: 0.017453292519943295
+      offset: 0.0
+      evidence:
+        - https://huggingface.co/docs/lerobot/main/en/backwardcomp keeps shoulder_pan unchanged in
+          degrees.
+        - Rerun UrdfJoint requires revolute values in radians.
+    main_shoulder_lift:
+      urdf_joint: "2"
+      scale: -0.017453292519943295
+      offset: 1.5707963267948966
+      evidence:
+        - https://huggingface.co/docs/lerobot/main/en/backwardcomp converts shoulder_lift as
+          -(old - 90) degrees.
+        - Rerun UrdfJoint requires revolute values in radians.
+    main_elbow_flex:
+      urdf_joint: "3"
+      scale: 0.017453292519943295
+      offset: -1.5707963267948966
+      evidence:
+        - https://huggingface.co/docs/lerobot/main/en/backwardcomp converts elbow_flex as old - 90
+          degrees.
+        - Rerun UrdfJoint requires revolute values in radians.
+    main_wrist_flex:
+      urdf_joint: "4"
+      scale: 0.017453292519943295
+      offset: 0.0
+      evidence:
+        - https://huggingface.co/docs/lerobot/main/en/backwardcomp keeps wrist_flex unchanged in
+          degrees.
+        - Rerun UrdfJoint requires revolute values in radians.
+    main_wrist_roll:
+      urdf_joint: "5"
+      scale: 0.017453292519943295
+      offset: 0.0
+      evidence:
+        - https://huggingface.co/docs/lerobot/main/en/backwardcomp keeps wrist_roll unchanged in
+          degrees.
+        - Rerun UrdfJoint requires revolute values in radians.
+  unmapped_features:
+    - main_gripper
   validation_required:
-    - verify dataset units from recorder calibration
-    - confirm zero offsets and sign conventions
-    - compare converted observed extrema with URDF joint limits
-    - visually inspect known poses in Rerun
+    - derive and validate the LeRobot 0-100 gripper command to URDF jaw-angle transform
+    - visually compare several recorded poses with source video
 known_limitations:
-  - Name/order correspondence is plausible but does not establish numeric conversion semantics.
-  - Provisional mappings are logged as evidence and can never enable Rerun animation.
+  - The five arm-joint transforms follow LeRobot's official old-to-new calibration conversion.
+  - The gripper stays at its URDF default because the SO-101 package says its 0-100 mapping is not
+    reflected in the URDF or MJCF.
+  - A small number of converted shoulder-lift and wrist-flex values exceed current URDF limits and
+    are visibly counted and clamped for rendering.

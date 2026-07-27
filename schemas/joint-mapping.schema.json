@@ -7,16 +7,33 @@
           "title": "Animate In Rerun",
           "type": "boolean"
         },
+        "coverage": {
+          "enum": [
+            "partial",
+            "complete"
+          ],
+          "title": "Coverage",
+          "type": "string"
+        },
         "dataset_units": {
           "title": "Dataset Units",
           "type": "string"
         },
         "entries": {
           "additionalProperties": {
-            "type": "string"
+            "$ref": "#/$defs/JointTransform"
           },
+          "minProperties": 1,
           "title": "Entries",
           "type": "object"
+        },
+        "out_of_range_policy": {
+          "enum": [
+            "clamp",
+            "reject"
+          ],
+          "title": "Out Of Range Policy",
+          "type": "string"
         },
         "status": {
           "enum": [
@@ -25,6 +42,13 @@
           ],
           "title": "Status",
           "type": "string"
+        },
+        "unmapped_features": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Unmapped Features",
+          "type": "array"
         },
         "urdf_units": {
           "title": "Urdf Units",
@@ -40,13 +64,48 @@
       },
       "required": [
         "status",
+        "coverage",
         "animate_in_rerun",
         "dataset_units",
         "urdf_units",
+        "out_of_range_policy",
         "entries",
         "validation_required"
       ],
       "title": "JointMapping",
+      "type": "object"
+    },
+    "JointTransform": {
+      "additionalProperties": false,
+      "properties": {
+        "evidence": {
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Evidence",
+          "type": "array"
+        },
+        "offset": {
+          "title": "Offset",
+          "type": "number"
+        },
+        "scale": {
+          "title": "Scale",
+          "type": "number"
+        },
+        "urdf_joint": {
+          "title": "Urdf Joint",
+          "type": "string"
+        }
+      },
+      "required": [
+        "urdf_joint",
+        "scale",
+        "offset",
+        "evidence"
+      ],
+      "title": "JointTransform",
       "type": "object"
     }
   },

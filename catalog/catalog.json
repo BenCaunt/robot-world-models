@@ -8,7 +8,7 @@
       "huggingface-hub"
     ]
   },
-  "contentSha256": "1d1202b738fd6b4a2af8c12dfc6227d376cf4cc8501ff616d48a2f466493b160",
+  "contentSha256": "8a8b73f90593994f9dbeaa70fc8ae9bf6f523efb7af4ec5dc38797a1f9eac09c",
   "entries": [
     {
       "manifest": {
@@ -24,7 +24,7 @@
               "main_wrist_roll",
               "main_gripper"
             ],
-            "units": "unknown-degree-like"
+            "units": "legacy LeRobot degrees for arm joints; normalized 0-100 for gripper"
           },
           "cameras": [
             "observation.images.laptop",
@@ -41,7 +41,7 @@
               "main_wrist_roll",
               "main_gripper"
             ],
-            "units": "unknown-degree-like"
+            "units": "legacy LeRobot degrees for arm joints; normalized 0-100 for gripper"
           },
           "total_episodes": 10,
           "total_frames": 10112
@@ -56,7 +56,8 @@
         "kind": "dataset",
         "known_limitations": [
           "The dataset-to-robot relationship is alias-derived rather than an exact catalog identifier.",
-          "State/action values appear degree-like, but units, offsets, signs, and limits are unverified.",
+          "The arm joints use LeRobot's legacy degree convention and require the official old-to-new calibration transform before use with the new-calibration URDF.",
+          "The upstream robot package does not define how the LeRobot 0-100 gripper value maps to the URDF jaw angle.",
           "The first state-only spike deliberately excludes about 210 MB of optional camera video."
         ],
         "license": "apache-2.0",
@@ -209,27 +210,70 @@
         "id": "nashmo-so101-to-so-arm101",
         "kind": "joint-mapping",
         "known_limitations": [
-          "Name/order correspondence is plausible but does not establish numeric conversion semantics.",
-          "Provisional mappings are logged as evidence and can never enable Rerun animation."
+          "The five arm-joint transforms follow LeRobot's official old-to-new calibration conversion.",
+          "The gripper stays at its URDF default because the SO-101 package says its 0-100 mapping is not reflected in the URDF or MJCF.",
+          "A small number of converted shoulder-lift and wrist-flex values exceed current URDF limits and are visibly counted and clamped for rendering."
         ],
         "mapping": {
-          "animate_in_rerun": false,
-          "dataset_units": "unknown-degree-like",
+          "animate_in_rerun": true,
+          "coverage": "partial",
+          "dataset_units": "legacy LeRobot degrees for arm joints; normalized 0-100 for gripper",
           "entries": {
-            "main_elbow_flex": "3",
-            "main_gripper": "6",
-            "main_shoulder_lift": "2",
-            "main_shoulder_pan": "1",
-            "main_wrist_flex": "4",
-            "main_wrist_roll": "5"
+            "main_elbow_flex": {
+              "evidence": [
+                "https://huggingface.co/docs/lerobot/main/en/backwardcomp converts elbow_flex as old - 90 degrees.",
+                "Rerun UrdfJoint requires revolute values in radians."
+              ],
+              "offset": -1.5707963267948966,
+              "scale": 0.017453292519943295,
+              "urdf_joint": "3"
+            },
+            "main_shoulder_lift": {
+              "evidence": [
+                "https://huggingface.co/docs/lerobot/main/en/backwardcomp converts shoulder_lift as -(old - 90) degrees.",
+                "Rerun UrdfJoint requires revolute values in radians."
+              ],
+              "offset": 1.5707963267948966,
+              "scale": -0.017453292519943295,
+              "urdf_joint": "2"
+            },
+            "main_shoulder_pan": {
+              "evidence": [
+                "https://huggingface.co/docs/lerobot/main/en/backwardcomp keeps shoulder_pan unchanged in degrees.",
+                "Rerun UrdfJoint requires revolute values in radians."
+              ],
+              "offset": 0.0,
+              "scale": 0.017453292519943295,
+              "urdf_joint": "1"
+            },
+            "main_wrist_flex": {
+              "evidence": [
+                "https://huggingface.co/docs/lerobot/main/en/backwardcomp keeps wrist_flex unchanged in degrees.",
+                "Rerun UrdfJoint requires revolute values in radians."
+              ],
+              "offset": 0.0,
+              "scale": 0.017453292519943295,
+              "urdf_joint": "4"
+            },
+            "main_wrist_roll": {
+              "evidence": [
+                "https://huggingface.co/docs/lerobot/main/en/backwardcomp keeps wrist_roll unchanged in degrees.",
+                "Rerun UrdfJoint requires revolute values in radians."
+              ],
+              "offset": 0.0,
+              "scale": 0.017453292519943295,
+              "urdf_joint": "5"
+            }
           },
-          "status": "provisional",
+          "out_of_range_policy": "clamp",
+          "status": "validated",
+          "unmapped_features": [
+            "main_gripper"
+          ],
           "urdf_units": "radians",
           "validation_required": [
-            "verify dataset units from recorder calibration",
-            "confirm zero offsets and sign conventions",
-            "compare converted observed extrema with URDF joint limits",
-            "visually inspect known poses in Rerun"
+            "derive and validate the LeRobot 0-100 gripper command to URDF jaw-angle transform",
+            "visually compare several recorded poses with source video"
           ]
         },
         "robot": "so-arm101",
@@ -268,7 +312,8 @@
         "kind": "recipe",
         "known_limitations": [
           "This state-only baseline is a pipeline proof, not the final visual world model.",
-          "URDF animation and joint-limit metrics remain disabled until the mapping is validated.",
+          "Rerun animates the five validated arm joints; the unmapped gripper remains at its URDF default.",
+          "Values outside current URDF limits are counted and clamped for rendering.",
           "Remote provisioning is intentionally absent until teardown tests pass."
         ],
         "mixture": {
