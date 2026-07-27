@@ -102,8 +102,7 @@ for wrist flex, and 0.53% for wrist roll. Rerun still counts and clamps every ov
 Keep the nested collection adapter and the 12-episode recipe as the local regression proof. Keep the
 tokenwise MLP as the visual control; this run does not justify returning to the transformer.
 
-The next useful data experiment is a source-held-out split over at least four selected members.
-Train on three task/setup roots and hold out the fourth as a complete source. Compare persistence
-and mean-action ablations per member, not only in aggregate. That run will require more desk-view
-video and feature-cache storage, so it should use a separately reviewed byte ceiling rather than
-silently widening this MPS recipe.
+The next data experiment was implemented as a separate four-member recipe with a 105 MB transfer
+ceiling. It preserves source identity, trains on three task/setup roots, holds out the fourth as a
+complete source, and compares persistence and mean-action ablations per member. See
+[`project-ira-so101-source-held-out-2026-07-27.md`](project-ira-so101-source-held-out-2026-07-27.md).

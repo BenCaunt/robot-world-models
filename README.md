@@ -29,6 +29,8 @@ The first local spike is executable and provides:
 - SO-101 state and DINOv2 visual-latent proof-of-concept trainers for MPS, CUDA, and CPU;
 - selectable tokenwise-MLP and spatial-transformer visual predictors with controlled H1/H5 recipe
   contracts;
+- source-held-out collection splits with source identity preserved on canonical episodes and
+  per-member persistence/action-ablation reports;
 - reusable AV1 video materialization, exact frame alignment, and revisioned visual-feature caches;
 - mandatory Rerun evaluation output, including separated actual/predicted URDF animation for
   validated joint transforms and actual/predicted RGB for visual recipes;
@@ -74,6 +76,16 @@ fails before transfer if the reviewed 75 MB ceiling would be exceeded:
 uv run rwm train project-ira-so101-dinov2-visual-poc \
   --run-dir runs/project-ira-so101-visual-poc
 uv run rerun runs/project-ira-so101-visual-poc/evaluation.rrd
+```
+
+Run the four-member source-held-out proof. It trains on nine episodes from each of three
+development members, validates on one episode from each, and keeps all ten yellow-plate episodes
+test-only. The selected desk-view payload is exactly 103,190,662 bytes under a 105 MB ceiling:
+
+```bash
+uv run rwm train project-ira-so101-dinov2-source-held-out-poc \
+  --run-dir runs/project-ira-so101-source-held-out-poc
+uv run rerun runs/project-ira-so101-source-held-out-poc/evaluation.rrd
 ```
 
 Start an agent with [`prompts/create-world-model.md`](prompts/create-world-model.md). The agent
@@ -135,14 +147,20 @@ the new LeRobot v3 adapter. It beat persistence by 60.3% and retained a 16.8% me
 gap, but did not improve on the earlier control's 20.2% relative action gap. See
 [`docs/spikes/project-ira-so101-visual-2026-07-27.md`](docs/spikes/project-ira-so101-visual-2026-07-27.md).
 
+A four-member follow-up then held every yellow-plate episode out of training and normalization.
+The unseen source still beat persistence by 26.5%, but real actions improved over the training-mean
+ablation by only 5.7%, versus 7.7–8.8% on the development members. This exposes a material
+source-generalization gap and does not justify remote scaling yet. See
+[`docs/spikes/project-ira-so101-source-held-out-2026-07-27.md`](docs/spikes/project-ira-so101-source-held-out-2026-07-27.md).
+
 ## Status
 
 WarmHub resolution, bounded state-data materialization, local training, checkpointing, baseline
 evaluation, one-camera visual-latent training, cached DINOv2 features, and actual/predicted Rerun
 images plus five-joint URDF animation are implemented. Controlled representation ablation and
 five-step visual training are also implemented. Nested LeRobot v3 collections can select exact
-members, slice shared video by episode, and enforce a pre-download byte ceiling. The
-spatial-transformer path is implemented and tested, but remains experimental because its tiny-data
-run mostly ignored action. Source-held-out visual evaluation, task-relevant metrics, sharper
-reconstruction, the SO-101 gripper transform, and paid RunPod provisioning remain future
+members, slice shared video by episode, enforce a pre-download byte ceiling, and hold a complete
+member out of training and normalization. The spatial-transformer path is implemented and tested,
+but remains experimental because its tiny-data run mostly ignored action. Task-relevant metrics,
+sharper reconstruction, the SO-101 gripper transform, and paid RunPod provisioning remain future
 milestones. The RunPod CLI remains intentionally plan-only.

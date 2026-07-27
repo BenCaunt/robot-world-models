@@ -20,6 +20,7 @@ class CachedVisualEpisode:
     frames: np.ndarray
     states: np.ndarray
     actions: np.ndarray
+    source_member: str | None = None
 
 
 def file_sha256(path: Path) -> str:
@@ -179,6 +180,7 @@ class DinoV2FeatureEncoder:
 def cache_visual_episode(
     *,
     episode_id: str,
+    source_member: str | None = None,
     video_path: Path,
     video_start_seconds: float = 0.0,
     video_frame_count: int | None = None,
@@ -216,6 +218,7 @@ def cache_visual_episode(
         if cache_version == 4 and cached_contract == cache_contract_json:
             return {
                 "episodeId": episode_id,
+                "sourceMember": source_member,
                 "path": str(cache_path),
                 "frames": frame_count,
                 "sha256": file_sha256(cache_path),
@@ -268,6 +271,7 @@ def cache_visual_episode(
     )
     return {
         "episodeId": episode_id,
+        "sourceMember": source_member,
         "path": str(cache_path),
         "frames": decoded_count,
         "featuresShape": list(features.shape),
@@ -281,7 +285,12 @@ def cache_visual_episode(
     }
 
 
-def load_cached_visual_episode(episode_id: str, cache_path: Path) -> CachedVisualEpisode:
+def load_cached_visual_episode(
+    episode_id: str,
+    cache_path: Path,
+    *,
+    source_member: str | None = None,
+) -> CachedVisualEpisode:
     with np.load(cache_path) as cached:
         return CachedVisualEpisode(
             episode_id=episode_id,
@@ -289,4 +298,5 @@ def load_cached_visual_episode(episode_id: str, cache_path: Path) -> CachedVisua
             frames=np.asarray(cached["frames"], dtype=np.uint8),
             states=np.asarray(cached["states"], dtype=np.float32),
             actions=np.asarray(cached["actions"], dtype=np.float32),
+            source_member=source_member,
         )

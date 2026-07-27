@@ -144,6 +144,7 @@ def test_adapter_splits_shared_parquet_and_preserves_tasks(tmp_path: Path) -> No
     assert inspection["totalEpisodes"] == 2
     assert [episode.episode_id for episode in episodes] == ["0", "1"]
     assert [len(episode.actions) for episode in episodes] == [3, 2]
+    assert [episode.source_member for episode in episodes] == [MEMBER, MEMBER]
     assert episodes[1].task == "move block"
     assert np.asarray(episodes[1].observations["state"]).shape == (2, 2)
 

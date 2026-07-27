@@ -27,6 +27,7 @@ class CanonicalEpisode:
     actions: Sequence[Sequence[float]]
     task: str | None
     modality_mask: Mapping[str, bool]
+    source_member: str | None = None
 
 
 @dataclass(frozen=True)

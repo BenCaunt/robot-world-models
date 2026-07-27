@@ -324,6 +324,7 @@ class LeRobotV3CollectionAdapter:
                             )
                         ),
                     },
+                    source_member=member_root,
                 )
 
     def video_segment(

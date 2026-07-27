@@ -7,6 +7,7 @@ from robot_world_models.training import Normalization, TrainingSpikeError
 from robot_world_models.visual_data import CachedVisualEpisode, cache_visual_episode
 from robot_world_models.visual_training import (
     _batch_arrays,
+    _evaluate_action_baselines,
     _make_model,
     _write_rollout_preview,
     visual_window_refs,
@@ -239,6 +240,52 @@ def test_visual_model_factory_rejects_unknown_implementation() -> None:
         _make_model(unknown_recipe)
 
 
+def test_action_baselines_report_persistence_and_training_mean_ablation() -> None:
+    torch = pytest.importorskip("torch")
+
+    class ActionOracle:
+        def eval(self):
+            return self
+
+        def __call__(self, contexts, states, actions):
+            features = torch.stack(
+                (torch.cos(actions[:, 0]), torch.sin(actions[:, 0])),
+                dim=-1,
+            )[:, None, :]
+            return features, states
+
+    angles = np.asarray([0.0, 0.3, 0.6, 0.9, 1.2], dtype=np.float32)
+    episode = CachedVisualEpisode(
+        episode_id="0",
+        features=np.stack((np.cos(angles), np.sin(angles)), axis=-1)[:, None, :],
+        frames=np.zeros((5, 4, 4, 3), dtype=np.uint8),
+        states=np.zeros((5, 1), dtype=np.float32),
+        actions=np.asarray([[0.3], [0.6], [0.9], [1.2], [1.2]], dtype=np.float32),
+        source_member="recording-a",
+    )
+    normalization = Normalization(
+        state_mean=np.zeros(1, dtype=np.float32),
+        state_std=np.ones(1, dtype=np.float32),
+        action_mean=np.zeros(1, dtype=np.float32),
+        action_std=np.ones(1, dtype=np.float32),
+    )
+
+    metrics = _evaluate_action_baselines(
+        model=ActionOracle(),
+        episodes=[episode],
+        normalization=normalization,
+        context_frames=1,
+        device="cpu",
+    )
+
+    assert metrics["visual_window_count"] == 4
+    assert metrics["one_step_latent_cosine_error"] == pytest.approx(0.0, abs=1e-6)
+    assert metrics["latent_persistence_baseline_cosine_error"] > 0
+    assert metrics["mean_action_ablation_cosine_error"] > 0
+    assert metrics["action_ablation_gap_absolute"] > 0
+    assert metrics["improvement_from_action_fraction"] == pytest.approx(1.0)
+
+
 def test_feature_cache_uses_encoder_aligned_rgb_targets(tmp_path, monkeypatch) -> None:
     source_frames = [
         np.full((8, 12, 3), value, dtype=np.uint8)
@@ -267,6 +314,7 @@ def test_feature_cache_uses_encoder_aligned_rgb_targets(tmp_path, monkeypatch) -
     cache_path = tmp_path / "episode.npz"
     receipt = cache_visual_episode(
         episode_id="0",
+        source_member="recording-a",
         video_path=tmp_path / "ignored.mp4",
         states=np.zeros((2, 2), dtype=np.float32),
         actions=np.zeros((2, 2), dtype=np.float32),
@@ -280,9 +328,11 @@ def test_feature_cache_uses_encoder_aligned_rgb_targets(tmp_path, monkeypatch) -
         assert int(cached["cache_version"]) == 4
         np.testing.assert_array_equal(cached["frames"], encoder_targets)
     assert receipt["rgbTargetTransform"].startswith("exact DINOv2")
+    assert receipt["sourceMember"] == "recording-a"
 
     reused = cache_visual_episode(
         episode_id="0",
+        source_member="recording-a",
         video_path=tmp_path / "ignored.mp4",
         states=np.zeros((2, 2), dtype=np.float32),
         actions=np.zeros((2, 2), dtype=np.float32),
@@ -293,6 +343,7 @@ def test_feature_cache_uses_encoder_aligned_rgb_targets(tmp_path, monkeypatch) -
     )
 
     assert reused["reused"] is True
+    assert reused["sourceMember"] == "recording-a"
 
 
 def test_rollout_preview_is_written(tmp_path) -> None:

@@ -101,13 +101,23 @@ def validate_repository(root: Path | None = None) -> list[tuple[Path, Manifest]]
                 and item.id == manifest.mixture.datasets[0]
             )
             selected_members = manifest.training.subset.member_roots
+            test_members = manifest.training.subset.test_member_roots
             if selected_members and dataset.collection is None:
                 raise CatalogError(
                     f"{path}: member_roots require a collection dataset"
                 )
+            if test_members and manifest.mixture.split.unit != "source":
+                raise CatalogError(
+                    f"{path}: test_member_roots require mixture.split.unit=source"
+                )
+            if manifest.mixture.split.unit == "source" and not test_members:
+                raise CatalogError(
+                    f"{path}: a source split requires explicit test_member_roots"
+                )
             if dataset.collection is not None:
                 unknown_members = sorted(
-                    set(selected_members) - set(dataset.collection.members)
+                    set([*selected_members, *test_members])
+                    - set(dataset.collection.members)
                 )
                 if unknown_members:
                     raise CatalogError(

@@ -111,6 +111,115 @@ def split_episode_ids(
     }
 
 
+def split_source_held_out_episode_ids(
+    episodes: list[CanonicalEpisode],
+    *,
+    test_source_members: list[str],
+    seed: int,
+    train_fraction: float,
+    validation_fraction: float,
+) -> dict[str, list[str]]:
+    if not test_source_members:
+        raise TrainingSpikeError(
+            "a source split requires explicit training.subset.test_member_roots"
+        )
+    missing_source = [
+        episode.episode_id for episode in episodes if episode.source_member is None
+    ]
+    if missing_source:
+        raise TrainingSpikeError(
+            "a source split requires source_member on every episode; missing for "
+            f"{missing_source[:5]}"
+        )
+    by_source: dict[str, list[str]] = {}
+    for episode in episodes:
+        assert episode.source_member is not None
+        by_source.setdefault(episode.source_member, []).append(episode.episode_id)
+    unknown = sorted(set(test_source_members) - set(by_source))
+    if unknown:
+        raise TrainingSpikeError(f"test source members were not materialized: {unknown}")
+
+    test_sources = set(test_source_members)
+    development = {
+        source: identifiers
+        for source, identifiers in by_source.items()
+        if source not in test_sources
+    }
+    if not development:
+        raise TrainingSpikeError("source holdout leaves no development members")
+    development_fraction = train_fraction + validation_fraction
+    if development_fraction <= 0:
+        raise TrainingSpikeError("source holdout leaves no train/validation fraction")
+    relative_validation_fraction = validation_fraction / development_fraction
+
+    train: list[str] = []
+    validation: list[str] = []
+    for source in sorted(development):
+        shuffled = list(development[source])
+        random.Random(f"{seed}:{source}").shuffle(shuffled)
+        if len(shuffled) < 2:
+            raise TrainingSpikeError(
+                f"development source {source} needs at least two episodes"
+            )
+        validation_count = max(
+            1,
+            int(round(len(shuffled) * relative_validation_fraction)),
+        )
+        validation_count = min(validation_count, len(shuffled) - 1)
+        validation.extend(shuffled[:validation_count])
+        train.extend(shuffled[validation_count:])
+
+    test = [
+        episode.episode_id
+        for episode in episodes
+        if episode.source_member in test_sources
+    ]
+    if not test:
+        raise TrainingSpikeError("source holdout leaves no test episodes")
+    declared_test_fraction = 1.0 - train_fraction - validation_fraction
+    actual_test_fraction = len(test) / len(episodes)
+    episode_rounding_tolerance = 1 / len(episodes)
+    if abs(actual_test_fraction - declared_test_fraction) > (
+        episode_rounding_tolerance + 1e-9
+    ):
+        raise TrainingSpikeError(
+            "test_member_roots do not match the declared test fraction: "
+            f"{actual_test_fraction:.6f} != {declared_test_fraction:.6f}"
+        )
+    return {"train": train, "validation": validation, "test": test}
+
+
+def split_canonical_episodes(
+    episodes: list[CanonicalEpisode],
+    *,
+    unit: str,
+    test_source_members: list[str],
+    seed: int,
+    train_fraction: float,
+    validation_fraction: float,
+) -> dict[str, list[str]]:
+    if unit == "episode":
+        if test_source_members:
+            raise TrainingSpikeError(
+                "test_member_roots may only be used with a source split"
+            )
+        return split_episode_ids(
+            [episode.episode_id for episode in episodes],
+            seed=seed,
+            train_fraction=train_fraction,
+            validation_fraction=validation_fraction,
+        )
+    if unit == "source":
+        return split_source_held_out_episode_ids(
+            episodes,
+            test_source_members=test_source_members,
+            seed=seed,
+            train_fraction=train_fraction,
+            validation_fraction=validation_fraction,
+        )
+    raise TrainingSpikeError(f"split unit is not implemented: {unit}")
+
+
 def transitions_from_episodes(episodes: list[CanonicalEpisode]) -> Transitions:
     states: list[np.ndarray] = []
     actions: list[np.ndarray] = []
@@ -516,8 +625,10 @@ def _run_recipe(
     _validate_dataset_contract(manifest=dataset, inspection=inspection)
     episodes = list(prepared.adapter.episodes(source_receipt))
     by_id = {episode.episode_id: episode for episode in episodes}
-    split = split_episode_ids(
-        list(by_id),
+    split = split_canonical_episodes(
+        episodes,
+        unit=recipe.mixture.split.unit,
+        test_source_members=recipe.training.subset.test_member_roots,
         seed=recipe.training.seed,
         train_fraction=recipe.mixture.split.train_fraction,
         validation_fraction=recipe.mixture.split.validation_fraction,

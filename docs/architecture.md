@@ -63,6 +63,12 @@ ceiling. A LeRobot v3 format adapter splits shared Parquet and MP4 chunks back i
 episodes using versioned episode metadata. WarmHub retains only compact facts and relationships;
 the source host retains every payload byte.
 
+Collection adapters also preserve the originating member root on every canonical episode. The
+splitter can therefore exclude complete members from training and normalization while still
+selecting episode-held-out validation examples independently inside each development member.
+Per-member persistence and training-mean-action ablations are evaluation outputs, not ad hoc
+analysis scripts.
+
 The visual spike adds a third boundary: a visual-feature cache owns the relationship between one
 decoded camera frame, the frozen encoder's exact processed view, its spatial latent tokens, and the
 RGB reconstruction target. The dynamics model consumes that cache without importing a source or

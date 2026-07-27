@@ -418,6 +418,13 @@
           },
           "title": "Member Roots",
           "type": "array"
+        },
+        "test_member_roots": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Test Member Roots",
+          "type": "array"
         }
       },
       "required": [

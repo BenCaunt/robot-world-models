@@ -29,6 +29,9 @@ large download before I approve the data plan.
    Test a larger or attention-based predictor as a controlled recipe after those baselines exist.
    Preserve residual priors at initialization and require both persistence improvement and a
    material action-ablation gap before promoting or scaling the architecture.
+   When several collection members or datasets are available, preserve source identity on every
+   canonical episode, hold complete sources out of the test split, and report persistence and
+   training-mean-action ablation metrics per source as well as in aggregate.
 9. Evaluate with Rerun. Produce an `.rrd` containing observations, predictions, metrics,
    provenance, and the WarmHub-resolved URDF. Animate validated mapping entries, display any
    explicitly unmapped joints, and prove motion by checking temporal `Transform3D` rows plus two

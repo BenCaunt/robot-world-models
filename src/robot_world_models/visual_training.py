@@ -29,7 +29,7 @@ from robot_world_models.training import (
     _sha256,
     _write_json,
     fit_normalization,
-    split_episode_ids,
+    split_canonical_episodes,
     transitions_from_episodes,
 )
 from robot_world_models.visual_data import (
@@ -569,6 +569,108 @@ def _evaluate(
     return metrics
 
 
+def _evaluate_action_baselines(
+    *,
+    model: VisualModel,
+    episodes: list[CachedVisualEpisode],
+    normalization: Normalization,
+    context_frames: int,
+    device: str,
+) -> dict[str, float | int]:
+    refs = visual_window_refs(episodes, context_frames)
+    if not refs:
+        raise TrainingSpikeError("source member has no visual evaluation windows")
+    latent_parts: list[np.ndarray] = []
+    persistence_parts: list[np.ndarray] = []
+    ablation_parts: list[np.ndarray] = []
+    for start in range(0, len(refs), 128):
+        arrays = _batch_arrays(
+            episodes,
+            refs[start : start + 128],
+            normalization,
+            context_frames,
+            rollout_horizon=1,
+        )
+        contexts, states, actions, targets, _, _ = arrays
+        actions = actions[:, 0]
+        targets = targets[:, 0]
+        predictions, _, _ = _step_arrays(
+            model=model,
+            contexts=contexts,
+            states=states,
+            actions=actions,
+            device=device,
+        )
+        ablated, _, _ = _step_arrays(
+            model=model,
+            contexts=contexts,
+            states=states,
+            actions=np.zeros_like(actions),
+            device=device,
+        )
+        latent_parts.append(
+            1 - np.sum(predictions * targets, axis=-1).mean(axis=1)
+        )
+        persistence_parts.append(
+            1 - np.sum(contexts[:, -1] * targets, axis=-1).mean(axis=1)
+        )
+        ablation_parts.append(
+            1 - np.sum(ablated * targets, axis=-1).mean(axis=1)
+        )
+    latent = float(np.concatenate(latent_parts).mean())
+    persistence = float(np.concatenate(persistence_parts).mean())
+    ablation = float(np.concatenate(ablation_parts).mean())
+    return {
+        "visual_window_count": len(refs),
+        "one_step_latent_cosine_error": latent,
+        "latent_persistence_baseline_cosine_error": persistence,
+        "mean_action_ablation_cosine_error": ablation,
+        "latent_improvement_over_persistence_absolute": persistence - latent,
+        "action_ablation_gap_absolute": ablation - latent,
+        "improvement_over_latent_persistence_fraction": 1 - latent / persistence,
+        "improvement_from_action_fraction": 1 - latent / ablation,
+    }
+
+
+def _evaluate_action_baselines_by_source(
+    *,
+    model: VisualModel,
+    episodes: list[CachedVisualEpisode],
+    split: dict[str, list[str]],
+    normalization: Normalization,
+    context_frames: int,
+    device: str,
+) -> dict[str, dict[str, object]]:
+    grouped: dict[str, list[CachedVisualEpisode]] = {}
+    for episode in episodes:
+        if episode.source_member is None:
+            raise TrainingSpikeError(
+                "per-source visual metrics require source_member on every episode"
+            )
+        grouped.setdefault(episode.source_member, []).append(episode)
+    role_by_episode = {
+        episode_id: role
+        for role, episode_ids in split.items()
+        for episode_id in episode_ids
+    }
+    return {
+        source: {
+            "episodes": len(member_episodes),
+            "splitRoles": sorted(
+                {role_by_episode[episode.episode_id] for episode in member_episodes}
+            ),
+            "metrics": _evaluate_action_baselines(
+                model=model,
+                episodes=member_episodes,
+                normalization=normalization,
+                context_frames=context_frames,
+                device=device,
+            ),
+        }
+        for source, member_episodes in sorted(grouped.items())
+    }
+
+
 def _visual_rollout(
     *,
     model: VisualModel,
@@ -781,8 +883,10 @@ def run_visual_recipe(
     inspection = prepared.adapter.inspect(source_receipt)
     episodes = list(prepared.adapter.episodes(source_receipt))
     by_id = {episode.episode_id: episode for episode in episodes}
-    split = split_episode_ids(
-        list(by_id),
+    split = split_canonical_episodes(
+        episodes,
+        unit=recipe.mixture.split.unit,
+        test_source_members=recipe.training.subset.test_member_roots,
         seed=recipe.training.seed,
         train_fraction=recipe.mixture.split.train_fraction,
         validation_fraction=recipe.mixture.split.validation_fraction,
@@ -808,6 +912,7 @@ def run_visual_recipe(
         cache_receipts.append(
             cache_visual_episode(
                 episode_id=episode.episode_id,
+                source_member=episode.source_member,
                 video_path=video_segment.path,
                 video_start_seconds=video_segment.start_seconds,
                 video_frame_count=video_segment.frame_count,
@@ -836,6 +941,7 @@ def run_visual_recipe(
         episode.episode_id: load_cached_visual_episode(
             episode.episode_id,
             run_dir / "features" / f"episode-{int(episode.episode_id):06d}.npz",
+            source_member=episode.source_member,
         )
         for episode in episodes
     }
@@ -845,6 +951,9 @@ def run_visual_recipe(
             "inspection": inspection,
             "episodesLoaded": len(episodes),
             "split": split,
+            "sourceMembers": {
+                episode.episode_id: episode.source_member for episode in episodes
+            },
             "transitionConvention": (
                 "camera[t-context:t] + state[t-1] + "
                 "action[t-1:t-1+h] -> camera latent[t:t+h] + state[t:t+h]"
@@ -903,6 +1012,14 @@ def run_visual_recipe(
         horizons=recipe.evaluation.rollout_horizons,
         device=device,
     )
+    per_member_metrics = _evaluate_action_baselines_by_source(
+        model=model,
+        episodes=list(cached_by_id.values()),
+        split=split,
+        normalization=normalization,
+        context_frames=vision.context_frames,
+        device=device,
+    )
 
     description = robot_resolution["description"]["data"]
     robot_receipt = GitHubSparseCheckoutSource().fetch_package(
@@ -953,6 +1070,10 @@ def run_visual_recipe(
         "device": device,
         "seed": recipe.training.seed,
         "split": split,
+        "sourceMembers": {
+            source: report["splitRoles"]
+            for source, report in per_member_metrics.items()
+        },
         "camera": vision.camera,
         "visualRolloutEpisode": test_episodes[0].episode_id,
         "visualRolloutStartFrame": rollout_start,
@@ -962,13 +1083,29 @@ def run_visual_recipe(
         and mapping.mapping.status == "validated"
         and mapping.mapping.animate_in_rerun
     )
+    rerun_metrics = dict(test_metrics)
+    for source, report in per_member_metrics.items():
+        member_metrics = report["metrics"]
+        assert isinstance(member_metrics, dict)
+        for metric_name in (
+            "one_step_latent_cosine_error",
+            "latent_persistence_baseline_cosine_error",
+            "mean_action_ablation_cosine_error",
+            "latent_improvement_over_persistence_absolute",
+            "action_ablation_gap_absolute",
+            "improvement_over_latent_persistence_fraction",
+            "improvement_from_action_fraction",
+        ):
+            rerun_metrics[f"source/{source}/{metric_name}"] = float(
+                member_metrics[metric_name]
+            )
     rerun_path, animation = write_state_evaluation(
         output_path=run_dir / "evaluation.rrd",
         run_id=run_dir.name,
         joint_names=dataset.episode_schema.state.names,
         actual_states=actual_states.tolist(),
         predicted_states=predicted_states.tolist(),
-        metrics=test_metrics,
+        metrics=rerun_metrics,
         provenance=provenance,
         urdf_path=urdf_path,
         joint_mapping=mapping.mapping.entries
@@ -988,6 +1125,7 @@ def run_visual_recipe(
     evaluation = {
         "validation": validation_metrics,
         "test": test_metrics,
+        "perMember": per_member_metrics,
         "metricUnits": {
             "latentCosineError": "unitless; lower is better",
             "pixelMae": "normalized RGB [0,1]",
@@ -1020,6 +1158,7 @@ def run_visual_recipe(
         "smokeTest": smoke,
         "training": training,
         "testMetrics": test_metrics,
+        "perMemberMetrics": per_member_metrics,
         "rerun": str(rerun_path),
         "preview": str(preview_path),
     }

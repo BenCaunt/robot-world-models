@@ -305,14 +305,26 @@ class ModelContract(ContractModel):
 class TrainingSubset(ContractModel):
     max_episodes: int = Field(gt=0)
     member_roots: list[str] = Field(default_factory=list)
+    test_member_roots: list[str] = Field(default_factory=list)
     max_download_bytes: int | None = Field(default=None, gt=0)
 
-    @field_validator("member_roots")
+    @field_validator("member_roots", "test_member_roots")
     @classmethod
     def validate_member_roots(cls, value: list[str]) -> list[str]:
         if len(set(value)) != len(value):
-            raise ValueError("training subset member_roots must be unique")
+            raise ValueError("training subset member roots must be unique")
         return value
+
+    @model_validator(mode="after")
+    def validate_test_members(self) -> TrainingSubset:
+        unknown = sorted(set(self.test_member_roots) - set(self.member_roots))
+        if unknown:
+            raise ValueError(
+                f"test_member_roots must also appear in member_roots: {unknown}"
+            )
+        if self.test_member_roots and len(self.test_member_roots) == len(self.member_roots):
+            raise ValueError("test_member_roots leave no development members")
+        return self
 
 
 class TrainingContract(ContractModel):

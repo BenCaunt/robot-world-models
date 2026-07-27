@@ -1,6 +1,6 @@
 # Robot World Models Specification
 
-Status: draft v0.6 — bounded SO-101 state, visual, architecture, and nested-collection spikes implemented
+Status: draft v0.7 — bounded SO-101 source-held-out visual evaluation implemented
 
 ## 1. Purpose
 
@@ -158,8 +158,9 @@ Dataset manifest
 ```
 
 The canonical episode contract contains observations, actions, timestamps, episode boundaries,
-dataset identity, robot identity, task metadata, and modality masks. Conversion must be resumable
-and content-addressed. Raw files remain immutable.
+dataset identity, robot identity, source-member identity when the upstream is a collection, task
+metadata, and modality masks. Conversion must be resumable and content-addressed. Raw files remain
+immutable.
 
 Source adapters accept a format-adapter-produced list of approved payload paths. This keeps
 transport independent from schema while ensuring a state-only spike does not download camera video
@@ -172,6 +173,12 @@ manifest. Recipes select exact members and a fail-closed byte ceiling. When a fo
 episodes in one Parquet or video chunk, the format adapter owns episode slicing and alignment; the
 source adapter still transfers only the approved chunks. WarmHub stores the aggregate facts and
 relationships, never those chunks.
+
+A source-held-out recipe explicitly names its test member roots. Every episode from those members
+is excluded from training, validation, and normalization. When the remaining development members
+also need validation coverage, validation episodes are selected independently within each
+development member; the resulting receipt distinguishes this episode-held-out validation from the
+complete source-held-out test.
 
 For a new dataset, the normal contribution is a manifest, fixture, and contract test. A new source
 adapter is justified only by a new transport or authentication method; a new format adapter is
@@ -289,6 +296,7 @@ Minimum visual-model additions:
 - the trained rollout horizon and discount in the run receipt;
 - a latent persistence baseline;
 - an action ablation that replaces action with its training mean;
+- per-source persistence and training-mean-action ablation metrics for source-aware mixtures;
 - decoded pixel error;
 - decoder reconstruction error on ground-truth latents, so decoder limitations are not confused
   with dynamics error;
@@ -491,6 +499,14 @@ horizon five and from 0.2737 to 0.2423 at horizon ten. One-step error worsened f
 and raw-unit state MAE worsened from 0.2769 to 0.3142. The five-step recipe is therefore the current
 rollout reference, while the one-step recipe remains the reference for immediate prediction.
 
+The first nested-collection source-held-out run selected 40 Project IRA episodes from four member
+roots while transferring exactly 103,190,662 bytes under a 105 MB ceiling. Three development
+members contributed 27 training and three validation episodes; all ten yellow-plate episodes were
+held out from training and normalization. On that unseen member, the tokenwise MLP improved latent
+cosine error by 26.5% over persistence but only 5.7% over replacing action with its training mean.
+The run therefore passes the passive-continuity baseline but not the action-sensitivity promotion
+gate. Its 839.4 MiB local feature cache and all training/Rerun artifacts remain outside WarmHub.
+
 ## 6. Completion criteria
 
 The local milestone is complete:
@@ -501,6 +517,8 @@ The local milestone is complete:
 - evaluation beats a persistence baseline on held-out episodes;
 - a controlled five-step visual objective improves five- and ten-step rollout error over the
   one-step visual control;
+- a complete collection member is held out from visual training and normalization, with
+  persistence and action-ablation metrics reported per member;
 - Rerun verifies metrics, actual/predicted trajectories, and dynamic SO-101 arm poses;
 - the implementation leaves a reusable contribution path.
 

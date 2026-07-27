@@ -17,7 +17,9 @@ Add support for a robot-learning dataset without creating one-off download or ex
    force an upstream conversion merely because the installed training library dropped an old format.
 9. If the repository is a collection, declare its complete reviewed member set, exclusions, and
    selection evidence. Put the experiment's exact member roots and fail-closed byte ceiling in the
-   recipe; do not write raw rows, videos, feature caches, or checkpoints to WarmHub.
+   recipe, and preserve the member root on every canonical episode so future recipes can perform
+   source-held-out evaluation. Do not write raw rows, videos, feature caches, or checkpoints to
+   WarmHub.
 10. Add the smallest license-safe fixture that exercises metadata, one episode boundary, timestamps,
    modalities, and error handling.
 11. Add contract tests for canonical episode output, selective materialization, checksums, resume

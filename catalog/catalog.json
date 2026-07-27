@@ -9,7 +9,7 @@
       "huggingface-hub"
     ]
   },
-  "contentSha256": "78f407b43bec4773b8cb9d3610c6f7bedf14a56d7e5aa91b30afc325ba2dda70",
+  "contentSha256": "704d3eb3e8680664bd679c1f82ac2f482c58bf333ea2a03a4f958a8a97b1dedb",
   "entries": [
     {
       "manifest": {
@@ -525,6 +525,149 @@
     },
     {
       "manifest": {
+        "display_name": "Project IRA SO-101 four-member source-held-out visual proof",
+        "evaluation": {
+          "metrics": [
+            "one_step_latent_cosine_error",
+            "rollout_latent_cosine_error_by_horizon",
+            "latent_persistence_baseline_cosine_error",
+            "mean_action_ablation_cosine_error",
+            "per_member_persistence_and_action_ablation",
+            "one_step_pixel_mae_0_1",
+            "decoder_reconstruction_mae_0_1",
+            "one_step_state_mae"
+          ],
+          "rerun_required": true,
+          "rollout_horizons": [
+            1,
+            5,
+            10
+          ],
+          "urdf_animation_requires_validated_joint_mapping": true,
+          "urdf_required": true
+        },
+        "id": "project-ira-so101-dinov2-source-held-out-poc",
+        "intent": {
+          "horizon_steps": 1,
+          "prediction_target": "next pooled DINOv2 patch tokens, decoded RGB frame, and joint state",
+          "purpose": "measure action sensitivity and generalization to one unseen SO-101 recording member"
+        },
+        "joint_mapping": "project-ira-so101-lego-to-so-arm101",
+        "kind": "recipe",
+        "known_limitations": [
+          "The source-held-out test is one recording member, not a held-out physical environment.",
+          "The three development members contribute nine training episodes and one validation episode each; all ten yellow-plate episodes are held out from normalization and training.",
+          "The selected numeric metadata and desk_view videos are exactly 103,190,662 upstream bytes at the pinned revision; the enforced ceiling is 105 MB.",
+          "Only desk_view is used; wrist_left remains upstream and is not downloaded.",
+          "The estimated local feature cache is approximately 1.2 GB and remains outside WarmHub and Git.",
+          "The 4x4 pooled patch grid and 64x64 decoder prioritize a bounded local proof over fidelity.",
+          "Remote provisioning remains plan-only until teardown tests pass."
+        ],
+        "mixture": {
+          "datasets": [
+            "project-ira-so101-lego"
+          ],
+          "missing_modality_policy": "reject-required",
+          "normalization": "per-feature-training-split for state and action; L2-normalized visual tokens",
+          "robot": "so-arm101",
+          "sampling": "episode-uniform windows from three development members; one complete member held out",
+          "split": {
+            "test_fraction": 0.25,
+            "train_fraction": 0.675,
+            "unit": "source",
+            "validation_fraction": 0.075
+          },
+          "type": "homogeneous"
+        },
+        "modalities": {
+          "optional": [
+            "observation.images.wrist_left"
+          ],
+          "required": [
+            "sensor/rgb",
+            "sensor/proprioception",
+            "state-space/joint-position",
+            "action-space/joint-position"
+          ]
+        },
+        "model": {
+          "action_dimension": 6,
+          "family": "action-conditioned-visual-latent-dynamics",
+          "hidden_dimension": 512,
+          "hidden_layers": 2,
+          "implementation": "robot_world_models.models.visual_latent:VisualLatentDynamics",
+          "state_dimension": 6,
+          "vision": {
+            "attention_heads": null,
+            "camera": "observation.images.desk_view",
+            "context_frames": 3,
+            "decoder_loss_weight": 1.0,
+            "encoder": {
+              "frozen": true,
+              "input_size": 224,
+              "latent_dimension": 384,
+              "license": "apache-2.0",
+              "model_id": "facebook/dinov2-small",
+              "patch_pool_grid": 4,
+              "revision": "ed25f3a31f01632728cabb09d1542f84ab7b0056",
+              "source_url": "https://huggingface.co/facebook/dinov2-small",
+              "warmhub_resolution": "registry-gap"
+            },
+            "encoder_batch_size": 32,
+            "output_size": 64,
+            "predicted_pixel_loss_weight": 0.25,
+            "predictor_hidden_dimension": 512,
+            "predictor_hidden_layers": 2,
+            "rollout_loss_discount": 1.0,
+            "state_loss_weight": 0.1,
+            "training_rollout_horizon": 1
+          }
+        },
+        "remote_compute": {
+          "cloud_type": "secure",
+          "enabled": true,
+          "explicit_approval_required": true,
+          "gpu_count": 1,
+          "implementation_status": "plan-only",
+          "max_hourly_usd": null,
+          "max_runtime_minutes": null,
+          "persistent_volume": false,
+          "preferred_gpu": "NVIDIA GeForce RTX 5090",
+          "provider": "runpod",
+          "public_service_ports": false
+        },
+        "schema_version": 1,
+        "training": {
+          "batch_size": 32,
+          "checkpoint_every_steps": 250,
+          "learning_rate": 0.001,
+          "local_devices": [
+            "mps",
+            "cuda",
+            "cpu"
+          ],
+          "max_steps": 1000,
+          "seed": 7,
+          "smoke_test_steps": 30,
+          "subset": {
+            "max_download_bytes": 105000000,
+            "max_episodes": 40,
+            "member_roots": [
+              "2026_06_11-19h48m_Sort_Lego_Color_red_1",
+              "2026_06_12-14h28m_Sort_Lego_Color_green_var_1",
+              "2026_06_03-20h21m_Sort_Lego_Color_multi_3",
+              "2026_07_03-13h24m_Sort_Lego_Color_yellow_plate_1"
+            ],
+            "test_member_roots": [
+              "2026_07_03-13h24m_Sort_Lego_Color_yellow_plate_1"
+            ]
+          }
+        }
+      },
+      "path": "catalog/recipes/project-ira-so101-dinov2-source-held-out-poc.yaml"
+    },
+    {
+      "manifest": {
         "display_name": "Project IRA action-diverse SO-101 visual world-model proof",
         "evaluation": {
           "metrics": [
@@ -652,7 +795,8 @@
             "member_roots": [
               "2026_07_03-13h24m_Sort_Lego_Color_yellow_plate_1",
               "2026_06_03-20h21m_Sort_Lego_Color_multi_3"
-            ]
+            ],
+            "test_member_roots": []
           }
         }
       },
@@ -784,7 +928,8 @@
           "subset": {
             "max_download_bytes": null,
             "max_episodes": 5,
-            "member_roots": []
+            "member_roots": [],
+            "test_member_roots": []
           }
         }
       },
@@ -916,7 +1061,8 @@
           "subset": {
             "max_download_bytes": null,
             "max_episodes": 5,
-            "member_roots": []
+            "member_roots": [],
+            "test_member_roots": []
           }
         }
       },
@@ -1047,7 +1193,8 @@
           "subset": {
             "max_download_bytes": null,
             "max_episodes": 5,
-            "member_roots": []
+            "member_roots": [],
+            "test_member_roots": []
           }
         }
       },
@@ -1179,7 +1326,8 @@
           "subset": {
             "max_download_bytes": null,
             "max_episodes": 5,
-            "member_roots": []
+            "member_roots": [],
+            "test_member_roots": []
           }
         }
       },
@@ -1310,7 +1458,8 @@
           "subset": {
             "max_download_bytes": null,
             "max_episodes": 5,
-            "member_roots": []
+            "member_roots": [],
+            "test_member_roots": []
           }
         }
       },
@@ -1415,7 +1564,8 @@
           "subset": {
             "max_download_bytes": null,
             "max_episodes": 10,
-            "member_roots": []
+            "member_roots": [],
+            "test_member_roots": []
           }
         }
       },
