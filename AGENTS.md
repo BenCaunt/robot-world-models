@@ -94,6 +94,11 @@ Do not hand-edit `catalog/catalog.json` or files under `schemas/`.
   revision, resize/crop transform, cache version, and per-episode frame alignment.
 - For visual models, compare with persistence and a training-mean action ablation. Report decoder
   reconstruction error separately from predicted-latent pixel error.
+- Change representation resolution and rollout objective in separate controlled recipes. Do not
+  compare raw latent errors across representations with different spatial pooling; use within-grid
+  baselines, decoder-oracle error, image metrics, storage, and latency.
+- Keep `intent.horizon_steps` equal to the executable visual `training_rollout_horizon`. Multi-step
+  training must feed predicted latent/state outputs back into the next step.
 - Skip and explain physical metrics whose units or robot mapping are not validated.
 
 The current homogeneous reference command is:
@@ -108,9 +113,12 @@ The current visual reference command is:
 
 ```bash
 uv sync --extra train --extra lerobot --extra vision
-uv run rwm train so101-dinov2-visual-poc --run-dir runs/<run-id>
+uv run rwm train so101-dinov2-visual-h5-poc --run-dir runs/<run-id>
 uv run rerun runs/<run-id>/evaluation.rrd
 ```
+
+Use `so101-dinov2-visual-poc` as the controlled one-step reference. The 8x8 recipe is retained as a
+negative ablation, not as the recommended default.
 
 ## Rerun rules
 

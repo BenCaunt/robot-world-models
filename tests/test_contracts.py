@@ -66,3 +66,35 @@ def test_visual_recipe_pins_encoder_and_requires_rgb() -> None:
     assert len(manifest.model.vision.encoder.revision) == 40
     assert manifest.model.vision.encoder.warmhub_resolution == "registry-gap"
     assert "sensor/rgb" in manifest.modalities.required
+
+
+def test_five_step_visual_recipe_declares_unrolled_objective() -> None:
+    path = (
+        repository_root()
+        / "catalog"
+        / "recipes"
+        / "so101-dinov2-visual-h5-poc.yaml"
+    )
+    manifest = MANIFEST_ADAPTER.validate_python(yaml.safe_load(path.read_text()))
+
+    assert manifest.intent.horizon_steps == 5
+    assert manifest.model.vision.encoder.patch_pool_grid == 4
+    assert manifest.model.vision.training_rollout_horizon == 5
+    assert manifest.model.vision.rollout_loss_discount == 0.8
+
+
+def test_visual_recipe_rejects_mismatched_training_horizon() -> None:
+    path = (
+        repository_root()
+        / "catalog"
+        / "recipes"
+        / "so101-dinov2-visual-h5-poc.yaml"
+    )
+    payload = yaml.safe_load(path.read_text())
+    payload["intent"]["horizon_steps"] = 1
+
+    with pytest.raises(
+        ValidationError,
+        match="intent horizon_steps must equal training_rollout_horizon",
+    ):
+        MANIFEST_ADAPTER.validate_python(payload)

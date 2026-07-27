@@ -514,15 +514,28 @@
           "title": "Predictor Hidden Layers",
           "type": "integer"
         },
+        "rollout_loss_discount": {
+          "exclusiveMinimum": 0,
+          "maximum": 1,
+          "title": "Rollout Loss Discount",
+          "type": "number"
+        },
         "state_loss_weight": {
           "minimum": 0,
           "title": "State Loss Weight",
           "type": "number"
+        },
+        "training_rollout_horizon": {
+          "exclusiveMinimum": 0,
+          "title": "Training Rollout Horizon",
+          "type": "integer"
         }
       },
       "required": [
         "camera",
         "context_frames",
+        "training_rollout_horizon",
+        "rollout_loss_discount",
         "output_size",
         "predictor_hidden_dimension",
         "predictor_hidden_layers",

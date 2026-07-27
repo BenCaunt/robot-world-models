@@ -37,7 +37,8 @@ robot receipt, and `evaluation.rrd`. `runs/` is gitignored.
 - Encoder view: 224x224; 16x16 patch grid pooled to 4x4; 384 dimensions per token
 - Context: three visual frames plus current normalized six-dimensional state and action
 - Outputs: next 16x384 latent grid, next state, and a learned 64x64 RGB decode
-- Trainable parameters: 2,417,065; DINOv2 remains frozen and outside the checkpoint
+- Trainable parameters: 1,997,737; DINOv2 remains frozen and outside the checkpoint
+- Decoder: bilinear resize followed by 3x3 convolutions; no transposed-convolution upsampling
 
 The cache stores float16 L2-normalized tokens and uint8 RGB. RGB is derived by denormalizing the
 exact DINOv2 processor tensor and then resizing it, so the decoder target has the same crop and
@@ -50,16 +51,16 @@ orientation as the encoder view.
 | Device | MPS, PyTorch 2.11.0 |
 | Split | 3 train / 1 validation / 1 test episodes |
 | Visual windows | 3,058 train / 1,026 validation / 1,024 test |
-| Smoke test | 0.3944 → 0.2214 total loss in 30 steps |
-| Full training | 1,000 steps in about 43 seconds |
-| One-step latent cosine error | 0.0570 |
+| Smoke test | 0.3946 → 0.2187 total loss in 30 steps |
+| Full training | 1,000 steps in about 76 seconds |
+| One-step latent cosine error | 0.0569 |
 | Persistence latent error | 0.0684 |
-| Improvement over persistence | 16.7% |
-| Training-mean action ablation error | 0.0718 |
-| Improvement from action | 20.7% |
-| Rollout latent error, horizon 1 / 5 / 10 | 0.0571 / 0.2331 / 0.2833 |
-| Predicted RGB MAE | 0.1232 on normalized RGB |
-| Ground-truth-latent decoder MAE | 0.1242 on normalized RGB |
+| Improvement over persistence | 16.9% |
+| Training-mean action ablation error | 0.0713 |
+| Improvement from action | 20.2% |
+| Rollout latent error, horizon 1 / 5 / 10 | 0.0570 / 0.2285 / 0.2737 |
+| Predicted RGB MAE | 0.1160 on normalized RGB |
+| Ground-truth-latent decoder MAE | 0.1157 on normalized RGB |
 | State MAE | 0.2769 raw mixed dataset units |
 | Rerun | 30-step open-loop RGB/error streams plus animated actual/predicted robots |
 
@@ -83,9 +84,10 @@ orientation as the encoder view.
    encoded a center crop. Latent metrics did not reveal the mismatch. Visual inspection did. Cache
    version 3 now derives the RGB target from the exact processor tensor and fingerprints the
    encoder, revision, input size, pool grid, and RGB output size before reuse.
-2. Correcting preprocessing reduced held-out pixel MAE from 0.1264 to 0.1232, but the result remains
-   blurry. Decoder reconstruction from the ground-truth latent is itself 0.1242, showing that the
-   4x4 bottleneck and lightweight decoder dominate pixel fidelity.
+2. Correcting preprocessing and replacing transposed-convolution upsampling with resize-convolution
+   reduced held-out pixel MAE to 0.1160 and removed visible banding, but the result remains blurry.
+   Decoder reconstruction from the ground-truth latent is itself 0.1157, showing that the 4x4
+   bottleneck and lightweight decoder still dominate pixel fidelity.
 3. Ten-step latent error is about five times one-step error. More one-step optimization did not
    solve compounding rollout drift; the next dynamics experiment needs an unrolled multi-step
    objective.
@@ -107,15 +109,16 @@ orientation as the encoder view.
 - Do not justify a paid GPU merely because the model is visual: this full local iteration trains in
   under a minute after caching.
 
-## Next experiment
+## Follow-up
 
-Run a controlled representation/rollout ablation:
+The controlled representation/rollout ablation is complete:
 
-1. increase the pooled DINOv2 grid from 4x4 to 8x8 and measure decoder reconstruction before
-   changing the dynamics model;
-2. train the predictor with an unrolled 5-step latent loss and evaluate at horizons 1, 5, and 10;
-3. retain persistence, action ablation, and ground-truth-latent decoder baselines;
-4. add an object- or task-relevant metric before using pixel fidelity as a planning proxy.
+1. 8x8 pooling was rejected because it increased cache size and worsened decoder reconstruction;
+2. a five-step open-loop objective improved held-out horizon-5 and horizon-10 errors while modestly
+   worsening one-step and state metrics;
+3. persistence, action ablation, and ground-truth-latent decoder baselines were retained.
 
-Only after the local representation and multi-step contracts are sound should a RunPod GPU be used
-for full 16x16 tokens, larger predictors, or V-JEPA-style video encoders.
+See
+[`so101-visual-rollout-ablation-2026-07-27.md`](so101-visual-rollout-ablation-2026-07-27.md).
+The next visual experiment should add an object- or task-relevant metric before using pixel fidelity
+as a planning proxy.

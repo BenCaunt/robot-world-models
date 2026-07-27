@@ -21,13 +21,16 @@ large download before I approve the data plan.
    reusable contribution.
 7. Train a bounded proof of concept locally with uv on MPS, CUDA, or CPU. Start with an overfit smoke
    test and compare against a naive baseline.
-8. Evaluate with Rerun. Produce an `.rrd` containing observations, predictions, metrics,
+8. For visual models, isolate representation changes from dynamics-objective changes. Establish a
+   decoder-oracle/image/storage baseline before increasing token resolution, then test multi-step
+   training against the unchanged representation. Keep the declared and executable horizons equal.
+9. Evaluate with Rerun. Produce an `.rrd` containing observations, predictions, metrics,
    provenance, and the WarmHub-resolved URDF. Animate validated mapping entries, display any
    explicitly unmapped joints, and prove motion by checking temporal `Transform3D` rows plus two
    visibly different timeline steps. A static URDF import is not a completed motion evaluation.
-9. Review the local result with me. Only if remote compute is justified, follow
+10. Review the local result with me. Only if remote compute is justified, follow
    `prompts/runpod-gpu.md`.
-10. End with reproducible commands, artifact paths, caveats, and the modular contribution that future
+11. End with reproducible commands, artifact paths, caveats, and the modular contribution that future
     agents can reuse.
 
 For visual recipes, use the exact encoder preprocessing output as the source for both cached
@@ -35,7 +38,10 @@ features and decoder RGB targets. Record resize, crop, orientation, normalizatio
 cache version, and per-episode frame counts. Compare latent prediction against both persistence and
 a training-mean action ablation. Report ground-truth-latent decoder reconstruction separately from
 predicted-latent pixel error, and inspect the generated actual/predicted preview before calling the
-visual result useful.
+visual result useful. Do not compare raw latent cosine values across different pooling grids as if
+they shared the same representation; use within-grid baselines and decoder/image metrics instead.
+For an open-loop objective, feed predictions—not future ground truth—through the unrolled steps and
+report the one-step tradeoff alongside longer-horizon gains.
 
 For an implemented homogeneous recipe, prefer `uv run rwm train <recipe-id> --run-dir
 runs/<run-id>` over recipe-specific scripts. Treat feature-to-URDF semantics as a dataset-to-robot

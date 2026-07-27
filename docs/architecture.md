@@ -31,7 +31,7 @@ flowchart LR
 | Dataset-robot mapping | feature/joint names, affine transforms, units, coverage, evidence, validation status | global robot identity |
 | Source adapter | download, authentication, resume, checksum | dataset schema |
 | Format adapter | source layout, payload selection, and canonical episodes | recipe-specific training |
-| Visual cache | video decoding, exact frame alignment, encoder transform, reusable features | source transport or model training |
+| Visual cache | video decoding, exact frame alignment, fully fingerprinted encoder/RGB transform, reusable features | source transport or model training |
 | Recipe | mixture, modalities, model and evaluation contract | one-off extraction logic |
 | Compute adapter | device or remote lifecycle | model semantics |
 | Rerun evaluator | inspectable inputs, predictions, metrics, robot geometry | training decisions |
@@ -62,3 +62,9 @@ decoded camera frame, the frozen encoder's exact processed view, its spatial lat
 RGB reconstruction target. The dynamics model consumes that cache without importing a source or
 format adapter. This lets a newly contributed dataset reuse visual training as soon as its adapter
 can provide aligned camera paths and canonical episodes.
+
+The visual recipe independently owns spatial pooling and the executable rollout objective. A
+one-step recipe and a multi-step recipe can reuse the same feature cache. Multi-step training starts
+from real context, then recursively feeds predicted latent grids and predicted state through the
+remaining declared horizon. This separation makes representation and dynamics ablations
+independently reviewable.

@@ -1,17 +1,17 @@
 schema_version: 1
 kind: recipe
-id: so101-dinov2-visual-poc
-display_name: SO-101 action-conditioned DINOv2 visual world-model proof
+id: so101-dinov2-visual-h5-poc
+display_name: SO-101 DINOv2 five-step visual world-model proof
 intent:
-  prediction_target: next pooled DINOv2 patch tokens, decoded RGB frame, and joint state
-  horizon_steps: 1
-  purpose: prove a camera-to-latent-to-rollout pipeline on MPS before scaling it on CUDA
+  prediction_target: five-step open-loop 4x4 DINOv2 tokens and joint states
+  horizon_steps: 5
+  purpose: test whether an unrolled latent loss reduces held-out five- and ten-step drift
 mixture:
   type: homogeneous
   datasets:
     - nashmo-so101
   robot: so-arm101
-  sampling: episode-uniform windows
+  sampling: episode-uniform five-step windows
   missing_modality_policy: reject-required
   normalization: per-feature-training-split for state and action; L2-normalized visual tokens
   split:
@@ -37,8 +37,8 @@ model:
   vision:
     camera: observation.images.laptop
     context_frames: 3
-    training_rollout_horizon: 1
-    rollout_loss_discount: 1.0
+    training_rollout_horizon: 5
+    rollout_loss_discount: 0.8
     output_size: 64
     predictor_hidden_dimension: 512
     predictor_hidden_layers: 2
@@ -58,7 +58,7 @@ model:
       latent_dimension: 384
 training:
   seed: 7
-  batch_size: 32
+  batch_size: 16
   learning_rate: 0.001
   max_steps: 1000
   smoke_test_steps: 30
@@ -98,11 +98,14 @@ remote_compute:
   public_service_ports: false
   explicit_approval_required: true
 known_limitations:
-  - The first visual recipe uses only the laptop camera and five episodes.
+  - The five-step loss is discounted by 0.8 per predicted step and pixel supervision remains
+    one-step so the experiment isolates open-loop latent/state training.
+  - The 4x4 representation was retained because the controlled 8x8 ablation used four times as many
+    latent elements, 2.5 times the compressed cache, and produced worse held-out decoder
+    reconstruction.
+  - The first visual recipes use only the laptop camera and five episodes.
   - DINOv2 is not yet represented in either WarmHub registry; the official upstream artifact is
     pinned and the gap is recorded in discovery.json.
-  - The 4x4 pooled patch grid and 64x64 learned decoder favor a bounded local proof over visual
-    fidelity.
-  - The predictor is trained one step at a time, so open-loop error is expected to compound.
+  - Ten-step evaluation extrapolates beyond the five-step training objective.
   - Rerun animates the five validated arm joints; the unmapped gripper remains at its URDF default.
   - Remote provisioning remains plan-only until teardown tests pass.

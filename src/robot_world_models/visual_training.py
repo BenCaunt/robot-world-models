@@ -51,11 +51,15 @@ class WindowRef:
 def visual_window_refs(
     episodes: list[CachedVisualEpisode],
     context_frames: int,
+    rollout_horizon: int = 1,
 ) -> list[WindowRef]:
     return [
         WindowRef(episode=episode_index, target=target)
         for episode_index, episode in enumerate(episodes)
-        for target in range(context_frames, len(episode.states))
+        for target in range(
+            context_frames,
+            len(episode.states) - rollout_horizon + 1,
+        )
     ]
 
 
@@ -82,6 +86,7 @@ def _batch_arrays(
     refs: list[WindowRef],
     normalization: Normalization,
     context_frames: int,
+    rollout_horizon: int,
 ) -> tuple[np.ndarray, ...]:
     contexts = np.stack(
         [
@@ -90,11 +95,30 @@ def _batch_arrays(
         ]
     )
     states = np.stack([episodes[ref.episode].states[ref.target - 1] for ref in refs])
-    actions = np.stack([episodes[ref.episode].actions[ref.target - 1] for ref in refs])
-    target_features = np.stack(
-        [episodes[ref.episode].features[ref.target] for ref in refs]
+    actions = np.stack(
+        [
+            episodes[ref.episode].actions[
+                ref.target - 1 : ref.target - 1 + rollout_horizon
+            ]
+            for ref in refs
+        ]
     )
-    target_states = np.stack([episodes[ref.episode].states[ref.target] for ref in refs])
+    target_features = np.stack(
+        [
+            episodes[ref.episode].features[
+                ref.target : ref.target + rollout_horizon
+            ]
+            for ref in refs
+        ]
+    )
+    target_states = np.stack(
+        [
+            episodes[ref.episode].states[
+                ref.target : ref.target + rollout_horizon
+            ]
+            for ref in refs
+        ]
+    )
     target_frames = np.stack([episodes[ref.episode].frames[ref.target] for ref in refs])
     return (
         contexts,
@@ -126,31 +150,77 @@ def _loss(
     batch,
     recipe: RecipeManifest,
 ):
+    import torch
     from torch.nn import functional as functional
 
     contexts, states, actions, target_features, target_states, target_frames = batch
-    predicted_features, predicted_states = model(contexts, states, actions)
-    latent = (1 - functional.cosine_similarity(predicted_features, target_features, dim=-1)).mean()
-    state = functional.mse_loss(predicted_states, target_states)
-    target_reconstruction = model.decode(target_features)
-    predicted_reconstruction = model.decode(predicted_features)
-    decoder = functional.l1_loss(target_reconstruction, target_frames)
-    predicted_pixel = functional.l1_loss(predicted_reconstruction, target_frames)
     vision = recipe.model.vision
     assert vision is not None
+    predicted_by_step = []
+    latent_by_step = []
+    state_by_step = []
+    rollout_context = contexts
+    rollout_state = states
+    for step in range(vision.training_rollout_horizon):
+        predicted_features, predicted_states = model(
+            rollout_context,
+            rollout_state,
+            actions[:, step],
+        )
+        predicted_by_step.append(predicted_features)
+        latent_by_step.append(
+            (
+                1
+                - functional.cosine_similarity(
+                    predicted_features,
+                    target_features[:, step],
+                    dim=-1,
+                )
+            ).mean()
+        )
+        state_by_step.append(
+            functional.mse_loss(predicted_states, target_states[:, step])
+        )
+        rollout_context = torch.cat(
+            (rollout_context[:, 1:], predicted_features[:, None]),
+            dim=1,
+        )
+        rollout_state = predicted_states
+    weights = [
+        vision.rollout_loss_discount**step
+        for step in range(vision.training_rollout_horizon)
+    ]
+    weight_sum = sum(weights)
+    latent = sum(
+        weight * value for weight, value in zip(weights, latent_by_step, strict=True)
+    ) / weight_sum
+    state = sum(
+        weight * value for weight, value in zip(weights, state_by_step, strict=True)
+    ) / weight_sum
+    target_reconstruction = model.decode(target_features[:, 0])
+    predicted_reconstruction = model.decode(predicted_by_step[0])
+    decoder = functional.l1_loss(target_reconstruction, target_frames)
+    predicted_pixel = functional.l1_loss(predicted_reconstruction, target_frames)
     total = (
         latent
         + vision.state_loss_weight * state
         + vision.decoder_loss_weight * decoder
         + vision.predicted_pixel_loss_weight * predicted_pixel
     )
-    return total, {
+    terms = {
         "total": float(total.detach().item()),
         "latentCosineError": float(latent.detach().item()),
         "normalizedStateMse": float(state.detach().item()),
         "decoderL1": float(decoder.detach().item()),
         "predictedPixelL1": float(predicted_pixel.detach().item()),
     }
+    terms.update(
+        {
+            f"latentCosineErrorH{step + 1}": float(value.detach().item())
+            for step, value in enumerate(latent_by_step)
+        }
+    )
+    return total, terms
 
 
 def _smoke_test(
@@ -171,6 +241,7 @@ def _smoke_test(
             batch_refs,
             normalization,
             recipe.model.vision.context_frames,  # type: ignore[union-attr]
+            recipe.model.vision.training_rollout_horizon,  # type: ignore[union-attr]
         ),
         device,
     )
@@ -227,7 +298,13 @@ def _train(
         selected = generator.integers(0, len(refs), size=recipe.training.batch_size)
         batch_refs = [refs[index] for index in selected]
         batch = _torch_batch(
-            _batch_arrays(episodes, batch_refs, normalization, vision.context_frames),
+            _batch_arrays(
+                episodes,
+                batch_refs,
+                normalization,
+                vision.context_frames,
+                vision.training_rollout_horizon,
+            ),
             device,
         )
         optimizer.zero_grad(set_to_none=True)
@@ -339,8 +416,17 @@ def _evaluate(
     started = time.monotonic()
     for start in range(0, len(refs), 128):
         batch_refs = refs[start : start + 128]
-        arrays = _batch_arrays(episodes, batch_refs, normalization, context_frames)
+        arrays = _batch_arrays(
+            episodes,
+            batch_refs,
+            normalization,
+            context_frames,
+            rollout_horizon=1,
+        )
         contexts, states, actions, targets, target_states, target_frames = arrays
+        actions = actions[:, 0]
+        targets = targets[:, 0]
+        target_states = target_states[:, 0]
         predictions, predicted_states, predicted_frames = _step_arrays(
             model=model,
             contexts=contexts,
@@ -735,9 +821,11 @@ def run_visual_recipe(
             "episodesLoaded": len(episodes),
             "split": split,
             "transitionConvention": (
-                "camera[t-context:t] + state[t-1] + action[t-1] "
-                "-> camera latent[t] + state[t]"
+                "camera[t-context:t] + state[t-1] + "
+                "action[t-1:t-1+h] -> camera latent[t:t+h] + state[t:t+h]"
             ),
+            "trainingRolloutHorizon": vision.training_rollout_horizon,
+            "rolloutLossDiscount": vision.rollout_loss_discount,
             "episodeBoundaryTransitions": False,
             "videosDownloaded": True,
             "camera": vision.camera,
@@ -750,7 +838,11 @@ def run_visual_recipe(
     numeric_train = [by_id[identifier] for identifier in split["train"]]
     normalization = fit_normalization(transitions_from_episodes(numeric_train))
     _write_json(run_dir / "normalization.json", normalization.to_json())
-    train_refs = visual_window_refs(train_episodes, vision.context_frames)
+    train_refs = visual_window_refs(
+        train_episodes,
+        vision.context_frames,
+        vision.training_rollout_horizon,
+    )
     smoke = _smoke_test(
         recipe=recipe,
         episodes=train_episodes,
@@ -825,6 +917,8 @@ def run_visual_recipe(
         "datasetWref": dataset_resolution["dataset"]["pinnedWref"],
         "robotWref": robot_resolution["robot"]["pinnedWref"],
         "visualEncoder": vision.encoder.model_dump(mode="json"),
+        "trainingRolloutHorizon": vision.training_rollout_horizon,
+        "rolloutLossDiscount": vision.rollout_loss_discount,
         "warmhubEncoderResolution": vision.encoder.warmhub_resolution,
         "upstreamDatasetRevision": source_receipt.source_revision,
         "datasetContentSha256": source_receipt.content_sha256,
@@ -896,6 +990,8 @@ def run_visual_recipe(
             "validation": len(visual_window_refs(validation_episodes, vision.context_frames)),
             "test": len(visual_window_refs(test_episodes, vision.context_frames)),
         },
+        "trainingRolloutHorizon": vision.training_rollout_horizon,
+        "rolloutLossDiscount": vision.rollout_loss_discount,
         "smokeTest": smoke,
         "training": training,
         "testMetrics": test_metrics,

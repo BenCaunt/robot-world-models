@@ -1,6 +1,6 @@
 # Robot World Models Specification
 
-Status: draft v0.3 — bounded SO-101 state and visual-latent spikes implemented
+Status: draft v0.4 — bounded SO-101 state, visual-latent, and multi-step rollout spikes implemented
 
 ## 1. Purpose
 
@@ -202,6 +202,13 @@ camera[t-2:t] -> frozen DINOv2-S -> pooled spatial tokens[t-2:t]
 tokens -> lightweight RGB decoder for qualitative inspection
 ```
 
+Visual recipes declare an executable `training_rollout_horizon`. For horizons above one, the
+predictor must feed each predicted latent and state into the next step rather than teacher-forcing
+ground truth after the initial context. `intent.horizon_steps` and `training_rollout_horizon` must
+match. Per-step latent and state losses are combined with the declared rollout discount; the
+reference five-step recipe keeps decoder supervision at step one so the dynamics change remains
+isolated.
+
 The visual cache must derive both features and RGB reconstruction targets from the exact same image
 processor output. Encoder resize, crop, orientation, and normalization are part of the cache
 contract. Independently resizing the raw frame for decoder supervision is invalid because it can
@@ -255,6 +262,7 @@ Minimum state-model metrics:
 Minimum visual-model additions:
 
 - latent cosine error at one and multiple rollout horizons;
+- the trained rollout horizon and discount in the run receipt;
 - a latent persistence baseline;
 - an action ablation that replaces action with its training mean;
 - decoded pixel error;
@@ -440,12 +448,24 @@ Apache-2.0 upstream model pinned to commit `ed25f3a31f01632728cabb09d1542f84ab7b
 no record in either WarmHub registry, so the run receipt marks an explicit registry gap and records
 the pinned official fallback.
 
-The 2,417,065-parameter predictor/decoder trained for 1,000 steps in about 43 seconds on MPS.
-Held-out one-step latent cosine error was 0.0570 versus 0.0684 for persistence and 0.0718 when action
-was replaced by its training mean. Error grew to 0.2833 at ten steps. Predicted-pixel MAE was 0.1232
-on normalized RGB; ground-truth-latent decoder MAE was 0.1242, confirming that the 4x4 representation
-and small decoder—not dynamics alone—limit visual fidelity. Rerun contains a 30-step open-loop
-actual/predicted image rollout and the corresponding animated robot trajectories.
+The corrected 1,997,737-parameter predictor/resize-conv decoder trained for 1,000 steps in about 76
+seconds on MPS. Held-out one-step latent cosine error was 0.0569 versus 0.0684 for persistence and
+0.0713 when action was replaced by its training mean. Error grew from 0.0570 at horizon one to
+0.2737 at horizon ten. Predicted-pixel MAE was 0.1160 on normalized RGB; ground-truth-latent decoder
+MAE was 0.1157. Rerun contains a 30-step open-loop actual/predicted image rollout and the
+corresponding animated robot trajectories.
+
+A controlled representation ablation changed only the pooled grid from 4x4 to 8x8. It increased the
+compressed feature cache from 120.3 MiB to 300.4 MiB, increased inference latency from 0.37 to 0.68
+milliseconds per transition, and worsened decoder MAE from 0.1157 to 0.1332. Raw latent cosine
+errors are not directly comparable across differently pooled representations; the decoder oracle,
+image metric, storage, and within-grid baselines reject 8x8 as the local default.
+
+The retained 4x4 representation then trained with a discounted five-step open-loop latent/state
+loss. Relative to the one-step 4x4 control, rollout cosine error improved from 0.2285 to 0.2040 at
+horizon five and from 0.2737 to 0.2423 at horizon ten. One-step error worsened from 0.0570 to 0.0602,
+and raw-unit state MAE worsened from 0.2769 to 0.3142. The five-step recipe is therefore the current
+rollout reference, while the one-step recipe remains the reference for immediate prediction.
 
 ## 6. Completion criteria
 
@@ -455,6 +475,8 @@ The local milestone is complete:
 - a bounded LeRobot slice downloads and validates through reusable adapters;
 - the state-dynamics baseline trains on MPS or CUDA;
 - evaluation beats a persistence baseline on held-out episodes;
+- a controlled five-step visual objective improves five- and ten-step rollout error over the
+  one-step visual control;
 - Rerun verifies metrics, actual/predicted trajectories, and dynamic SO-101 arm poses;
 - the implementation leaves a reusable contribution path.
 

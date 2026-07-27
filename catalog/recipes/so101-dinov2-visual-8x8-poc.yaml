@@ -1,11 +1,11 @@
 schema_version: 1
 kind: recipe
-id: so101-dinov2-visual-poc
-display_name: SO-101 action-conditioned DINOv2 visual world-model proof
+id: so101-dinov2-visual-8x8-poc
+display_name: SO-101 DINOv2 8x8 visual representation ablation
 intent:
-  prediction_target: next pooled DINOv2 patch tokens, decoded RGB frame, and joint state
+  prediction_target: next 8x8 pooled DINOv2 patch tokens, decoded RGB frame, and joint state
   horizon_steps: 1
-  purpose: prove a camera-to-latent-to-rollout pipeline on MPS before scaling it on CUDA
+  purpose: isolate spatial representation resolution before changing the rollout objective
 mixture:
   type: homogeneous
   datasets:
@@ -54,7 +54,7 @@ model:
       warmhub_resolution: registry-gap
       frozen: true
       input_size: 224
-      patch_pool_grid: 4
+      patch_pool_grid: 8
       latent_dimension: 384
 training:
   seed: 7
@@ -98,11 +98,10 @@ remote_compute:
   public_service_ports: false
   explicit_approval_required: true
 known_limitations:
-  - The first visual recipe uses only the laptop camera and five episodes.
+  - This ablation changes only the pooled spatial grid from 4x4 to 8x8.
+  - The predictor is still trained one step at a time, so rollout drift remains expected.
+  - The first visual recipes use only the laptop camera and five episodes.
   - DINOv2 is not yet represented in either WarmHub registry; the official upstream artifact is
     pinned and the gap is recorded in discovery.json.
-  - The 4x4 pooled patch grid and 64x64 learned decoder favor a bounded local proof over visual
-    fidelity.
-  - The predictor is trained one step at a time, so open-loop error is expected to compound.
   - Rerun animates the five validated arm joints; the unmapped gripper remains at its URDF default.
   - Remote provisioning remains plan-only until teardown tests pass.

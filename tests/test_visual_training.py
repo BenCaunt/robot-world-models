@@ -3,8 +3,13 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
+from robot_world_models.training import Normalization
 from robot_world_models.visual_data import CachedVisualEpisode, cache_visual_episode
-from robot_world_models.visual_training import _write_rollout_preview, visual_window_refs
+from robot_world_models.visual_training import (
+    _batch_arrays,
+    _write_rollout_preview,
+    visual_window_refs,
+)
 
 
 def test_visual_windows_never_cross_episode_boundaries() -> None:
@@ -27,6 +32,42 @@ def test_visual_windows_never_cross_episode_boundaries() -> None:
         (1, 3),
         (1, 4),
     ]
+
+
+def test_five_step_windows_and_targets_stay_inside_each_episode() -> None:
+    episode = CachedVisualEpisode(
+        episode_id="0",
+        features=np.arange(9 * 4 * 2, dtype=np.float32).reshape(9, 4, 2),
+        frames=np.zeros((9, 8, 8, 3), dtype=np.uint8),
+        states=np.arange(18, dtype=np.float32).reshape(9, 2),
+        actions=np.arange(18, dtype=np.float32).reshape(9, 2),
+    )
+    normalization = Normalization(
+        state_mean=np.zeros(2, dtype=np.float32),
+        state_std=np.ones(2, dtype=np.float32),
+        action_mean=np.zeros(2, dtype=np.float32),
+        action_std=np.ones(2, dtype=np.float32),
+    )
+
+    refs = visual_window_refs([episode], context_frames=3, rollout_horizon=5)
+    arrays = _batch_arrays(
+        [episode],
+        refs,
+        normalization,
+        context_frames=3,
+        rollout_horizon=5,
+    )
+    contexts, states, actions, target_features, target_states, target_frames = arrays
+
+    assert [(ref.episode, ref.target) for ref in refs] == [(0, 3), (0, 4)]
+    assert contexts.shape == (2, 3, 4, 2)
+    assert states.shape == (2, 2)
+    assert actions.shape == (2, 5, 2)
+    assert target_features.shape == (2, 5, 4, 2)
+    assert target_states.shape == (2, 5, 2)
+    assert target_frames.shape == (2, 8, 8, 3)
+    np.testing.assert_array_equal(actions[0], episode.actions[2:7])
+    np.testing.assert_array_equal(target_states[0], episode.states[3:8])
 
 
 def test_visual_model_shapes_and_decoder_range() -> None:
@@ -53,6 +94,10 @@ def test_visual_model_shapes_and_decoder_range() -> None:
     assert images.shape == (2, 3, 64, 64)
     assert images.min() >= 0
     assert images.max() <= 1
+    assert not any(
+        isinstance(module, torch.nn.ConvTranspose2d)
+        for module in model.decoder.modules()
+    )
 
     higher_resolution_model = VisualLatentDynamics(
         state_dimension=2,

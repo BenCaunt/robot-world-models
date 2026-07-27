@@ -238,6 +238,8 @@ class VisionEncoderContract(ContractModel):
 class VisionModelContract(ContractModel):
     camera: str
     context_frames: int = Field(gt=0)
+    training_rollout_horizon: int = Field(gt=0)
+    rollout_loss_discount: float = Field(gt=0, le=1)
     output_size: int = Field(gt=0)
     predictor_hidden_dimension: int = Field(gt=0)
     predictor_hidden_layers: int = Field(gt=0)
@@ -305,6 +307,18 @@ class RecipeManifest(ManifestBase):
     training: TrainingContract
     evaluation: EvaluationContract
     remote_compute: RemoteComputeContract
+
+    @model_validator(mode="after")
+    def validate_visual_training_horizon(self) -> RecipeManifest:
+        if (
+            self.model.vision is not None
+            and self.intent.horizon_steps
+            != self.model.vision.training_rollout_horizon
+        ):
+            raise ValueError(
+                "visual intent horizon_steps must equal training_rollout_horizon"
+            )
+        return self
 
 
 Manifest = Annotated[

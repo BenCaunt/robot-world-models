@@ -55,11 +55,12 @@ uv run rwm train so101-state-dynamics-poc --run-dir runs/so101-demo
 uv run rerun runs/so101-demo/evaluation.rrd
 ```
 
-Run the one-camera visual-latent proof:
+Run the one-camera visual-latent proof. The five-step recipe is the current reference for
+open-loop rollout work; use `so101-dinov2-visual-poc` when one-step fidelity is the priority:
 
 ```bash
 uv sync --extra train --extra lerobot --extra vision
-uv run rwm train so101-dinov2-visual-poc --run-dir runs/so101-visual
+uv run rwm train so101-dinov2-visual-h5-poc --run-dir runs/so101-visual
 uv run rerun runs/so101-visual/evaluation.rrd
 ```
 
@@ -93,20 +94,27 @@ persistence baseline. Open-loop MSE rose to 0.733 at ten steps.
 See [`docs/spikes/so101-state-dynamics-2026-07-27.md`](docs/spikes/so101-state-dynamics-2026-07-27.md)
 for the full result, failures, and next experiment.
 
-The follow-on visual spike used five episodes and a frozen, revision-pinned DINOv2-S encoder. A
-2.42M-parameter action-conditioned predictor trained for 1,000 steps on MPS in about 43 seconds.
-On the held-out episode it reduced one-step latent cosine error by 16.7% relative to persistence and
-by 20.7% relative to replacing the action with its training mean. Ten-step error still grew to about
-five times one-step error, and the deliberately small 4x4 spatial bottleneck produced only coarse
-64x64 reconstructions.
+The follow-on visual spike used five episodes and a frozen, revision-pinned DINOv2-S encoder. The
+corrected 2.00M-parameter one-step model reduced held-out latent cosine error by 16.9% relative to
+persistence and by 20.2% relative to replacing the action with its training mean. Its resize-conv
+decoder reached 0.1157 ground-truth-latent RGB MAE, but the deliberately small 4x4 spatial
+bottleneck still produced only coarse 64x64 reconstructions.
 
 See [`docs/spikes/so101-visual-latent-2026-07-27.md`](docs/spikes/so101-visual-latent-2026-07-27.md)
-for the exact contract, measurements, visual findings, and next experiment.
+for the corrected reference contract and initial findings.
+
+A controlled follow-up rejected an 8x8 pooled-token default: it used 300.4 MiB of compressed
+feature cache versus 120.3 MiB for 4x4 and made decoder MAE 15.1% worse. Retaining 4x4 tokens and
+training with a discounted five-step open-loop loss improved held-out rollout cosine error by 10.7%
+at horizon 5 and 11.5% at horizon 10, with a 5.6% one-step tradeoff. See
+[`docs/spikes/so101-visual-rollout-ablation-2026-07-27.md`](docs/spikes/so101-visual-rollout-ablation-2026-07-27.md)
+for the experiment matrix and recommendation.
 
 ## Status
 
 WarmHub resolution, bounded state-data materialization, local training, checkpointing, baseline
 evaluation, one-camera visual-latent training, cached DINOv2 features, and actual/predicted Rerun
-images plus five-joint URDF animation are implemented. Sharper visual reconstruction,
-multi-step visual training, the SO-101 gripper transform, and paid RunPod provisioning remain future
+images plus five-joint URDF animation are implemented. Controlled representation ablation and
+five-step visual training are also implemented. Task-relevant visual metrics, sharper
+reconstruction, the SO-101 gripper transform, and paid RunPod provisioning remain future
 milestones. The RunPod CLI remains intentionally plan-only.

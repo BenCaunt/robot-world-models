@@ -52,7 +52,17 @@ class VisualLatentDynamics(nn.Module):
             output_channels = max(16, 128 // (2**stage))
             decoder_layers.extend(
                 [
-                    nn.ConvTranspose2d(input_channels, output_channels, 4, 2, 1),
+                    nn.Upsample(
+                        scale_factor=2,
+                        mode="bilinear",
+                        align_corners=False,
+                    ),
+                    nn.Conv2d(
+                        input_channels,
+                        output_channels,
+                        3,
+                        padding=1,
+                    ),
                     nn.SiLU(),
                 ]
             )
