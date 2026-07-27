@@ -94,6 +94,11 @@ Do not hand-edit `catalog/catalog.json` or files under `schemas/`.
   revision, resize/crop transform, cache version, and per-episode frame alignment.
 - For visual models, compare with persistence and a training-mean action ablation. Report decoder
   reconstruction error separately from predicted-latent pixel error.
+- Treat action sensitivity as an architecture gate. Do not promote or scale a predictor that beats
+  persistence but remains nearly unchanged under the training-mean action ablation.
+- For residual predictors, preserve the baseline prior at initialization by zero-initializing the
+  final delta head. If a model needs a different learning rate to pass the smoke test, record that
+  as an explicit optimizer difference.
 - Change representation resolution and rollout objective in separate controlled recipes. Do not
   compare raw latent errors across representations with different spatial pooling; use within-grid
   baselines, decoder-oracle error, image metrics, storage, and latency.
@@ -118,7 +123,10 @@ uv run rerun runs/<run-id>/evaluation.rrd
 ```
 
 Use `so101-dinov2-visual-poc` as the controlled one-step reference. The 8x8 recipe is retained as a
-negative ablation, not as the recommended default.
+negative ablation, not as the recommended default. The
+`so101-dinov2-transformer-poc` and `so101-dinov2-transformer-h5-poc` recipes exercise spatial
+attention, but remain experimental because the first corrected H1 run showed only a 0.61%
+action-ablation gap.
 
 ## Rerun rules
 

@@ -6,6 +6,12 @@ from typing import Annotated, Literal
 from pydantic import BaseModel, ConfigDict, Field, TypeAdapter, field_validator, model_validator
 
 ID_PATTERN = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
+VISUAL_MLP_IMPLEMENTATION = (
+    "robot_world_models.models.visual_latent:VisualLatentDynamics"
+)
+VISUAL_TRANSFORMER_IMPLEMENTATION = (
+    "robot_world_models.models.visual_transformer:VisualSpatiotemporalTransformer"
+)
 
 
 class ContractModel(BaseModel):
@@ -243,6 +249,7 @@ class VisionModelContract(ContractModel):
     output_size: int = Field(gt=0)
     predictor_hidden_dimension: int = Field(gt=0)
     predictor_hidden_layers: int = Field(gt=0)
+    attention_heads: int | None = Field(default=None, gt=0)
     encoder_batch_size: int = Field(gt=0)
     state_loss_weight: float = Field(ge=0)
     decoder_loss_weight: float = Field(ge=0)
@@ -317,6 +324,29 @@ class RecipeManifest(ManifestBase):
         ):
             raise ValueError(
                 "visual intent horizon_steps must equal training_rollout_horizon"
+            )
+        return self
+
+    @model_validator(mode="after")
+    def validate_visual_attention(self) -> RecipeManifest:
+        vision = self.model.vision
+        if vision is None:
+            return self
+        if (
+            self.model.implementation == VISUAL_TRANSFORMER_IMPLEMENTATION
+            and vision.attention_heads is None
+        ):
+            raise ValueError("visual transformer requires attention_heads")
+        if (
+            self.model.implementation == VISUAL_TRANSFORMER_IMPLEMENTATION
+            and vision.predictor_hidden_layers < 2
+        ):
+            raise ValueError("visual transformer requires at least two predictor_hidden_layers")
+        if vision.attention_heads is None:
+            return self
+        if vision.predictor_hidden_dimension % vision.attention_heads:
+            raise ValueError(
+                "predictor_hidden_dimension must be divisible by attention_heads"
             )
         return self
 

@@ -45,7 +45,7 @@ robot_world_models.warmhub    read-only typed wrapper around the wh CLI
 robot_world_models.adapters   versioned source and format adapters
 robot_world_models.devices    MPS/CUDA/CPU selection
 robot_world_models.runpod     plan and policy only in v0.1
-robot_world_models.models     small reference models
+robot_world_models.models     recipe-selected MLP and spatial-transformer reference models
 robot_world_models.eval       mandatory Rerun receipts
 robot_world_models.training   receipt-producing local recipe runner
 robot_world_models.visual_data  video decoding and frozen-feature cache contract
@@ -68,3 +68,15 @@ one-step recipe and a multi-step recipe can reuse the same feature cache. Multi-
 from real context, then recursively feeds predicted latent grids and predicted state through the
 remaining declared horizon. This separation makes representation and dynamics ablations
 independently reviewable.
+
+Visual model construction is contract-driven. The trainer dispatches the recipe's declared
+implementation to either the tokenwise MLP or the spatiotemporal transformer and rejects unknown
+implementations. Both models consume and emit the same spatial-cache contract and share the same
+decoder boundary. Transformer-specific fields, such as attention heads, are validated in the
+recipe schema rather than hidden in training code.
+
+The transformer treats every time/space feature as a token, appends projected state and action
+tokens, encodes that memory, and decodes one learned query per output location. Its feature and
+state delta heads start at zero so the untrained model preserves latent persistence and unchanged
+state. Persistence and mean-action ablation jointly gate promotion: long-horizon smoothness is not
+enough when a model ignores control.

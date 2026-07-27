@@ -1,0 +1,111 @@
+schema_version: 1
+kind: recipe
+id: so101-dinov2-transformer-h5-poc
+display_name: SO-101 DINOv2 spatial-transformer five-step proof
+intent:
+  prediction_target: five-step open-loop 4x4 DINOv2 token grids and joint states
+  horizon_steps: 5
+  purpose: isolate whether spatial token interaction improves the five-step visual world model
+mixture:
+  type: homogeneous
+  datasets:
+    - nashmo-so101
+  robot: so-arm101
+  sampling: episode-uniform five-step windows
+  missing_modality_policy: reject-required
+  normalization: per-feature-training-split for state and action; L2-normalized visual tokens
+  split:
+    unit: episode
+    train_fraction: 0.6
+    validation_fraction: 0.2
+    test_fraction: 0.2
+joint_mapping: nashmo-so101-to-so-arm101
+modalities:
+  required:
+    - sensor/rgb
+    - sensor/proprioception
+    - state-space/joint-position
+    - action-space/joint-position
+  optional: []
+model:
+  family: action-conditioned-spatiotemporal-transformer
+  implementation: robot_world_models.models.visual_transformer:VisualSpatiotemporalTransformer
+  state_dimension: 6
+  action_dimension: 6
+  hidden_dimension: 256
+  hidden_layers: 4
+  vision:
+    camera: observation.images.laptop
+    context_frames: 3
+    training_rollout_horizon: 5
+    rollout_loss_discount: 0.8
+    output_size: 64
+    predictor_hidden_dimension: 256
+    predictor_hidden_layers: 4
+    attention_heads: 8
+    encoder_batch_size: 32
+    state_loss_weight: 0.1
+    decoder_loss_weight: 1.0
+    predicted_pixel_loss_weight: 0.25
+    encoder:
+      model_id: facebook/dinov2-small
+      revision: ed25f3a31f01632728cabb09d1542f84ab7b0056
+      source_url: https://huggingface.co/facebook/dinov2-small
+      license: apache-2.0
+      warmhub_resolution: registry-gap
+      frozen: true
+      input_size: 224
+      patch_pool_grid: 4
+      latent_dimension: 384
+training:
+  seed: 7
+  batch_size: 16
+  learning_rate: 0.0001
+  max_steps: 1000
+  smoke_test_steps: 30
+  checkpoint_every_steps: 250
+  local_devices:
+    - mps
+    - cuda
+    - cpu
+  subset:
+    max_episodes: 5
+evaluation:
+  rerun_required: true
+  urdf_required: true
+  urdf_animation_requires_validated_joint_mapping: true
+  metrics:
+    - one_step_latent_cosine_error
+    - rollout_latent_cosine_error_by_horizon
+    - latent_persistence_baseline_cosine_error
+    - mean_action_ablation_cosine_error
+    - one_step_pixel_mae_0_1
+    - decoder_reconstruction_mae_0_1
+    - one_step_state_mae
+  rollout_horizons:
+    - 1
+    - 5
+    - 10
+remote_compute:
+  enabled: true
+  implementation_status: plan-only
+  provider: runpod
+  preferred_gpu: NVIDIA GeForce RTX 5090
+  gpu_count: 1
+  cloud_type: secure
+  max_hourly_usd: null
+  max_runtime_minutes: null
+  persistent_volume: false
+  public_service_ports: false
+  explicit_approval_required: true
+known_limitations:
+  - This recipe changes the predictor architecture and uses a 0.0001 learning rate after the
+    transformer's residual-initialized predictor failed its smoke test at the MLP's 0.001 rate.
+  - The five-step loss is discounted by 0.8 per predicted step and pixel supervision remains
+    one-step so the experiment isolates open-loop latent/state training.
+  - The first visual recipes use only the laptop camera and five episodes.
+  - DINOv2 is not yet represented in either WarmHub registry; the official upstream artifact is
+    pinned and the gap is recorded in discovery.json.
+  - Ten-step evaluation extrapolates beyond the five-step training objective.
+  - Rerun animates the five validated arm joints; the unmapped gripper remains at its URDF default.
+  - Remote provisioning remains plan-only until teardown tests pass.

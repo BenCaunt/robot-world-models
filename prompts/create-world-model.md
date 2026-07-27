@@ -24,6 +24,9 @@ large download before I approve the data plan.
 8. For visual models, isolate representation changes from dynamics-objective changes. Establish a
    decoder-oracle/image/storage baseline before increasing token resolution, then test multi-step
    training against the unchanged representation. Keep the declared and executable horizons equal.
+   Test a larger or attention-based predictor as a controlled recipe after those baselines exist.
+   Preserve residual priors at initialization and require both persistence improvement and a
+   material action-ablation gap before promoting or scaling the architecture.
 9. Evaluate with Rerun. Produce an `.rrd` containing observations, predictions, metrics,
    provenance, and the WarmHub-resolved URDF. Animate validated mapping entries, display any
    explicitly unmapped joints, and prove motion by checking temporal `Transform3D` rows plus two

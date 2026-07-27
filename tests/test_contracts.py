@@ -98,3 +98,69 @@ def test_visual_recipe_rejects_mismatched_training_horizon() -> None:
         match="intent horizon_steps must equal training_rollout_horizon",
     ):
         MANIFEST_ADAPTER.validate_python(payload)
+
+
+def test_visual_transformer_recipe_declares_spatial_attention() -> None:
+    path = (
+        repository_root()
+        / "catalog"
+        / "recipes"
+        / "so101-dinov2-transformer-h5-poc.yaml"
+    )
+    manifest = MANIFEST_ADAPTER.validate_python(yaml.safe_load(path.read_text()))
+
+    assert manifest.model.family == "action-conditioned-spatiotemporal-transformer"
+    assert manifest.model.vision.attention_heads == 8
+    assert manifest.model.vision.predictor_hidden_dimension == 256
+    assert manifest.model.vision.predictor_hidden_layers == 4
+
+
+def test_visual_transformer_rejects_invalid_attention_width() -> None:
+    path = (
+        repository_root()
+        / "catalog"
+        / "recipes"
+        / "so101-dinov2-transformer-poc.yaml"
+    )
+    payload = yaml.safe_load(path.read_text())
+    payload["model"]["vision"]["attention_heads"] = 7
+
+    with pytest.raises(
+        ValidationError,
+        match="predictor_hidden_dimension must be divisible by attention_heads",
+    ):
+        MANIFEST_ADAPTER.validate_python(payload)
+
+
+def test_visual_transformer_requires_attention_heads() -> None:
+    path = (
+        repository_root()
+        / "catalog"
+        / "recipes"
+        / "so101-dinov2-transformer-poc.yaml"
+    )
+    payload = yaml.safe_load(path.read_text())
+    del payload["model"]["vision"]["attention_heads"]
+
+    with pytest.raises(
+        ValidationError,
+        match="visual transformer requires attention_heads",
+    ):
+        MANIFEST_ADAPTER.validate_python(payload)
+
+
+def test_visual_transformer_requires_encoder_and_decoder_layers() -> None:
+    path = (
+        repository_root()
+        / "catalog"
+        / "recipes"
+        / "so101-dinov2-transformer-poc.yaml"
+    )
+    payload = yaml.safe_load(path.read_text())
+    payload["model"]["vision"]["predictor_hidden_layers"] = 1
+
+    with pytest.raises(
+        ValidationError,
+        match="visual transformer requires at least two predictor_hidden_layers",
+    ):
+        MANIFEST_ADAPTER.validate_python(payload)

@@ -12,6 +12,8 @@ from robot_world_models.adapters.sources.github import GitHubSparseCheckoutSourc
 from robot_world_models.adapters.sources.huggingface import HuggingFaceDatasetSource
 from robot_world_models.catalog import manifest_by_id, repository_root
 from robot_world_models.contracts import (
+    VISUAL_MLP_IMPLEMENTATION,
+    VISUAL_TRANSFORMER_IMPLEMENTATION,
     DatasetManifest,
     JointMappingManifest,
     RecipeManifest,
@@ -40,6 +42,13 @@ from robot_world_models.warmhub import WarmHubCLI
 
 if TYPE_CHECKING:
     from robot_world_models.models.visual_latent import VisualLatentDynamics
+    from robot_world_models.models.visual_transformer import (
+        VisualSpatiotemporalTransformer,
+    )
+
+    VisualModel = VisualLatentDynamics | VisualSpatiotemporalTransformer
+else:
+    VisualModel = Any
 
 
 @dataclass(frozen=True)
@@ -63,21 +72,37 @@ def visual_window_refs(
     ]
 
 
-def _make_model(recipe: RecipeManifest) -> VisualLatentDynamics:
-    from robot_world_models.models.visual_latent import VisualLatentDynamics
-
+def _make_model(recipe: RecipeManifest) -> VisualModel:
     vision = recipe.model.vision
     if vision is None:
         raise TrainingSpikeError("visual trainer requires model.vision")
-    return VisualLatentDynamics(
-        state_dimension=recipe.model.state_dimension,
-        action_dimension=recipe.model.action_dimension,
-        latent_dimension=vision.encoder.latent_dimension,
-        context_frames=vision.context_frames,
-        patch_grid=vision.encoder.patch_pool_grid,
-        output_size=vision.output_size,
-        hidden_dimension=vision.predictor_hidden_dimension,
-        hidden_layers=vision.predictor_hidden_layers,
+    common = {
+        "state_dimension": recipe.model.state_dimension,
+        "action_dimension": recipe.model.action_dimension,
+        "latent_dimension": vision.encoder.latent_dimension,
+        "context_frames": vision.context_frames,
+        "patch_grid": vision.encoder.patch_pool_grid,
+        "output_size": vision.output_size,
+        "hidden_dimension": vision.predictor_hidden_dimension,
+        "hidden_layers": vision.predictor_hidden_layers,
+    }
+    if recipe.model.implementation == VISUAL_MLP_IMPLEMENTATION:
+        from robot_world_models.models.visual_latent import VisualLatentDynamics
+
+        return VisualLatentDynamics(**common)
+    if recipe.model.implementation == VISUAL_TRANSFORMER_IMPLEMENTATION:
+        from robot_world_models.models.visual_transformer import (
+            VisualSpatiotemporalTransformer,
+        )
+
+        if vision.attention_heads is None:
+            raise TrainingSpikeError("visual transformer requires attention_heads")
+        return VisualSpatiotemporalTransformer(
+            **common,
+            attention_heads=vision.attention_heads,
+        )
+    raise TrainingSpikeError(
+        f"unsupported visual model implementation: {recipe.model.implementation}"
     )
 
 
@@ -146,7 +171,7 @@ def _torch_batch(arrays: tuple[np.ndarray, ...], device: str):
 
 def _loss(
     *,
-    model: VisualLatentDynamics,
+    model: VisualModel,
     batch,
     recipe: RecipeManifest,
 ):
@@ -345,7 +370,7 @@ def _train(
 
 def _step_arrays(
     *,
-    model: VisualLatentDynamics,
+    model: VisualModel,
     contexts: np.ndarray,
     states: np.ndarray,
     actions: np.ndarray,
@@ -379,7 +404,7 @@ def _step_arrays(
 
 def _decode_arrays(
     *,
-    model: VisualLatentDynamics,
+    model: VisualModel,
     features: np.ndarray,
     device: str,
 ) -> np.ndarray:
@@ -397,7 +422,7 @@ def _decode_arrays(
 
 def _evaluate(
     *,
-    model: VisualLatentDynamics,
+    model: VisualModel,
     episodes: list[CachedVisualEpisode],
     normalization: Normalization,
     context_frames: int,
@@ -546,7 +571,7 @@ def _evaluate(
 
 def _visual_rollout(
     *,
-    model: VisualLatentDynamics,
+    model: VisualModel,
     episode: CachedVisualEpisode,
     normalization: Normalization,
     context_frames: int,

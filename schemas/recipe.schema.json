@@ -472,6 +472,19 @@
     "VisionModelContract": {
       "additionalProperties": false,
       "properties": {
+        "attention_heads": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Attention Heads"
+        },
         "camera": {
           "title": "Camera",
           "type": "string"

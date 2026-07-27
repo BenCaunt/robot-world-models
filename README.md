@@ -26,6 +26,8 @@ The first local spike is executable and provides:
 - live, Arc-aware discovery across both WarmHub registries;
 - reusable Hugging Face, LeRobot v2.1, and GitHub description adapters;
 - SO-101 state and DINOv2 visual-latent proof-of-concept trainers for MPS, CUDA, and CPU;
+- selectable tokenwise-MLP and spatial-transformer visual predictors with controlled H1/H5 recipe
+  contracts;
 - reusable AV1 video materialization, exact frame alignment, and revisioned visual-feature caches;
 - mandatory Rerun evaluation output, including separated actual/predicted URDF animation for
   validated joint transforms and actual/predicted RGB for visual recipes;
@@ -110,11 +112,20 @@ at horizon 5 and 11.5% at horizon 10, with a 5.6% one-step tradeoff. See
 [`docs/spikes/so101-visual-rollout-ablation-2026-07-27.md`](docs/spikes/so101-visual-rollout-ablation-2026-07-27.md)
 for the experiment matrix and recommendation.
 
+A compact 4.50M-parameter spatiotemporal transformer was then tested against the one-step MLP
+control. After correcting residual-head initialization and using a stable `0.0001` learning rate,
+it beat persistence by 14.0% and improved H5/H10 open-loop latent error. However, its mean-action
+ablation gap was only 0.61%, versus 20.2% for the MLP control. It is retained as an executable
+negative architecture ablation, not promoted as the default. See
+[`docs/spikes/so101-visual-transformer-ablation-2026-07-27.md`](docs/spikes/so101-visual-transformer-ablation-2026-07-27.md).
+
 ## Status
 
 WarmHub resolution, bounded state-data materialization, local training, checkpointing, baseline
 evaluation, one-camera visual-latent training, cached DINOv2 features, and actual/predicted Rerun
 images plus five-joint URDF animation are implemented. Controlled representation ablation and
-five-step visual training are also implemented. Task-relevant visual metrics, sharper
-reconstruction, the SO-101 gripper transform, and paid RunPod provisioning remain future
-milestones. The RunPod CLI remains intentionally plan-only.
+five-step visual training are also implemented. The spatial-transformer path is implemented and
+tested, but remains experimental because its tiny-data run mostly ignored action. Task-relevant
+visual metrics, sharper reconstruction, more action-diverse data, the SO-101 gripper transform,
+and paid RunPod provisioning remain future milestones. The RunPod CLI remains intentionally
+plan-only.

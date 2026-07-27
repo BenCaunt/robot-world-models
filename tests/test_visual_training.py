@@ -3,10 +3,11 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from robot_world_models.training import Normalization
+from robot_world_models.training import Normalization, TrainingSpikeError
 from robot_world_models.visual_data import CachedVisualEpisode, cache_visual_episode
 from robot_world_models.visual_training import (
     _batch_arrays,
+    _make_model,
     _write_rollout_preview,
     visual_window_refs,
 )
@@ -125,6 +126,117 @@ def test_visual_model_shapes_and_decoder_range() -> None:
         64,
         64,
     )
+
+
+def test_visual_transformer_mixes_spatial_tokens() -> None:
+    torch = pytest.importorskip("torch")
+    from robot_world_models.models.visual_latent import VisualLatentDynamics
+    from robot_world_models.models.visual_transformer import (
+        VisualSpatiotemporalTransformer,
+    )
+
+    torch.manual_seed(7)
+    common = {
+        "state_dimension": 2,
+        "action_dimension": 2,
+        "latent_dimension": 8,
+        "context_frames": 3,
+        "patch_grid": 2,
+        "output_size": 8,
+        "hidden_dimension": 32,
+    }
+    tokenwise = VisualLatentDynamics(**common, hidden_layers=2).eval()
+    transformer = VisualSpatiotemporalTransformer(
+        **common,
+        hidden_layers=4,
+        attention_heads=4,
+    ).eval()
+    torch.nn.init.normal_(transformer.feature_head.weight, std=0.02)
+    context = torch.nn.functional.normalize(torch.randn(1, 3, 4, 8), dim=-1)
+    perturbed = context.clone()
+    perturbed[:, :, 0] = torch.nn.functional.normalize(
+        perturbed[:, :, 0] + 2,
+        dim=-1,
+    )
+    state = torch.zeros(1, 2)
+    action = torch.zeros(1, 2)
+
+    tokenwise_before, _ = tokenwise(context, state, action)
+    tokenwise_after, _ = tokenwise(perturbed, state, action)
+    transformer_before, _ = transformer(context, state, action)
+    transformer_after, _ = transformer(perturbed, state, action)
+
+    torch.testing.assert_close(tokenwise_before[:, 1], tokenwise_after[:, 1])
+    assert not torch.allclose(transformer_before[:, 1], transformer_after[:, 1])
+    assert transformer.decode(transformer_before).shape == (1, 3, 8, 8)
+
+
+def test_visual_transformer_starts_at_persistence() -> None:
+    torch = pytest.importorskip("torch")
+    from robot_world_models.models.visual_transformer import (
+        VisualSpatiotemporalTransformer,
+    )
+
+    model = VisualSpatiotemporalTransformer(
+        state_dimension=2,
+        action_dimension=2,
+        latent_dimension=8,
+        context_frames=3,
+        patch_grid=2,
+        output_size=8,
+        hidden_dimension=32,
+        hidden_layers=4,
+        attention_heads=4,
+    ).eval()
+    context = torch.nn.functional.normalize(torch.randn(2, 3, 4, 8), dim=-1)
+    state = torch.randn(2, 2)
+
+    features, predicted_state = model(context, state, torch.randn(2, 2))
+
+    torch.testing.assert_close(features, context[:, -1])
+    torch.testing.assert_close(predicted_state, state)
+
+
+def test_visual_model_factory_uses_recipe_implementation() -> None:
+    pytest.importorskip("torch")
+    import yaml
+
+    from robot_world_models.catalog import repository_root
+    from robot_world_models.contracts import MANIFEST_ADAPTER
+    from robot_world_models.models.visual_transformer import (
+        VisualSpatiotemporalTransformer,
+    )
+
+    path = (
+        repository_root()
+        / "catalog"
+        / "recipes"
+        / "so101-dinov2-transformer-poc.yaml"
+    )
+    recipe = MANIFEST_ADAPTER.validate_python(yaml.safe_load(path.read_text()))
+
+    assert isinstance(_make_model(recipe), VisualSpatiotemporalTransformer)
+
+
+def test_visual_model_factory_rejects_unknown_implementation() -> None:
+    pytest.importorskip("torch")
+    import yaml
+
+    from robot_world_models.catalog import repository_root
+    from robot_world_models.contracts import MANIFEST_ADAPTER
+
+    path = (
+        repository_root()
+        / "catalog"
+        / "recipes"
+        / "so101-dinov2-transformer-poc.yaml"
+    )
+    recipe = MANIFEST_ADAPTER.validate_python(yaml.safe_load(path.read_text()))
+    unknown_model = recipe.model.model_copy(update={"implementation": "example:Unknown"})
+    unknown_recipe = recipe.model_copy(update={"model": unknown_model})
+
+    with pytest.raises(TrainingSpikeError, match="unsupported visual model implementation"):
+        _make_model(unknown_recipe)
 
 
 def test_feature_cache_uses_encoder_aligned_rgb_targets(tmp_path, monkeypatch) -> None:

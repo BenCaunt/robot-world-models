@@ -1,6 +1,6 @@
 # Robot World Models Specification
 
-Status: draft v0.4 — bounded SO-101 state, visual-latent, and multi-step rollout spikes implemented
+Status: draft v0.5 — bounded SO-101 state, visual-latent, rollout, and architecture spikes implemented
 
 ## 1. Purpose
 
@@ -217,6 +217,24 @@ ask the decoder to reconstruct pixels the encoder never observed.
 Existing open weights may be fine-tuned when their license, modality contract, encoder resolution,
 action representation, and embodiment assumptions match. Otherwise, begin with the small baseline
 instead of forcing an incompatible checkpoint.
+
+Visual predictor implementations are selected by the recipe contract, not by editing the trainer.
+The initial implementations are:
+
+- a tokenwise MLP that shares state/action conditioning across spatial tokens;
+- a spatiotemporal transformer that attends across space, time, state, and action before decoding
+  learned output queries.
+
+Residual predictors should preserve their useful prior at initialization. A transformer that
+predicts a delta over the latest latent grid zero-initializes its final feature-delta and
+state-delta layers, then proves optimization stability with the smoke test. Architecture-specific
+optimizer changes must be recorded explicitly rather than presented as single-variable
+comparisons.
+
+An architecture is not promoted because it beats persistence alone. It must also show a material
+gap against the training-mean action ablation. Beating persistence while producing nearly the same
+prediction for real and mean actions indicates passive visual-continuity modeling, not a useful
+action-conditioned world model.
 
 **Exit artifacts:** checkpoint, config, environment receipt, training metrics, and failure report if
 the smoke test does not pass.

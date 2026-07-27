@@ -5,6 +5,65 @@ from torch import nn
 from torch.nn import functional as functional
 
 
+def build_spatial_decoder(
+    *,
+    latent_dimension: int,
+    patch_grid: int,
+    output_size: int,
+) -> nn.Sequential:
+    if output_size < patch_grid or output_size % patch_grid:
+        raise ValueError("output_size must be a power-of-two multiple of patch_grid")
+    scale = output_size // patch_grid
+    if scale & (scale - 1):
+        raise ValueError("output_size must be a power-of-two multiple of patch_grid")
+    decoder_layers: list[nn.Module] = []
+    input_channels = latent_dimension
+    for stage in range(scale.bit_length() - 1):
+        output_channels = max(16, 128 // (2**stage))
+        decoder_layers.extend(
+            [
+                nn.Upsample(
+                    scale_factor=2,
+                    mode="bilinear",
+                    align_corners=False,
+                ),
+                nn.Conv2d(
+                    input_channels,
+                    output_channels,
+                    3,
+                    padding=1,
+                ),
+                nn.SiLU(),
+            ]
+        )
+        input_channels = output_channels
+    decoder_layers.extend(
+        [
+            nn.Conv2d(input_channels, 3, 3, padding=1),
+            nn.Sigmoid(),
+        ]
+    )
+    return nn.Sequential(*decoder_layers)
+
+
+def decode_spatial_features(
+    features: torch.Tensor,
+    *,
+    patch_grid: int,
+    decoder: nn.Module,
+) -> torch.Tensor:
+    expected_tokens = patch_grid**2
+    if features.ndim != 3 or features.shape[1] != expected_tokens:
+        raise ValueError(f"features must contain {expected_tokens} spatial tokens")
+    spatial = features.transpose(1, 2).reshape(
+        features.shape[0],
+        features.shape[2],
+        patch_grid,
+        patch_grid,
+    )
+    return decoder(spatial)
+
+
 class VisualLatentDynamics(nn.Module):
     """Predict pooled DINOv2 patch tokens and robot state from context and action."""
 
@@ -41,39 +100,11 @@ class VisualLatentDynamics(nn.Module):
             nn.SiLU(),
             nn.Linear(hidden_dimension, state_dimension),
         )
-        if output_size < patch_grid or output_size % patch_grid:
-            raise ValueError("output_size must be a power-of-two multiple of patch_grid")
-        scale = output_size // patch_grid
-        if scale & (scale - 1):
-            raise ValueError("output_size must be a power-of-two multiple of patch_grid")
-        decoder_layers: list[nn.Module] = []
-        input_channels = latent_dimension
-        for stage in range(scale.bit_length() - 1):
-            output_channels = max(16, 128 // (2**stage))
-            decoder_layers.extend(
-                [
-                    nn.Upsample(
-                        scale_factor=2,
-                        mode="bilinear",
-                        align_corners=False,
-                    ),
-                    nn.Conv2d(
-                        input_channels,
-                        output_channels,
-                        3,
-                        padding=1,
-                    ),
-                    nn.SiLU(),
-                ]
-            )
-            input_channels = output_channels
-        decoder_layers.extend(
-            [
-                nn.Conv2d(input_channels, 3, 3, padding=1),
-                nn.Sigmoid(),
-            ]
+        self.decoder = build_spatial_decoder(
+            latent_dimension=latent_dimension,
+            patch_grid=patch_grid,
+            output_size=output_size,
         )
-        self.decoder = nn.Sequential(*decoder_layers)
 
     def forward(
         self,
@@ -95,13 +126,8 @@ class VisualLatentDynamics(nn.Module):
         return predicted_features, predicted_state
 
     def decode(self, features: torch.Tensor) -> torch.Tensor:
-        expected_tokens = self.patch_grid**2
-        if features.ndim != 3 or features.shape[1] != expected_tokens:
-            raise ValueError(f"features must contain {expected_tokens} spatial tokens")
-        spatial = features.transpose(1, 2).reshape(
-            features.shape[0],
-            features.shape[2],
-            self.patch_grid,
-            self.patch_grid,
+        return decode_spatial_features(
+            features,
+            patch_grid=self.patch_grid,
+            decoder=self.decoder,
         )
-        return self.decoder(spatial)
