@@ -8,8 +8,104 @@
       "huggingface-hub"
     ]
   },
-  "contentSha256": "4b8d5f71953338af75986aebcaf9b6a9d011ba56c2e2f198d6933c57be99e832",
+  "contentSha256": "1d1202b738fd6b4a2af8c12dfc6227d376cf4cc8501ff616d48a2f466493b160",
   "entries": [
+    {
+      "manifest": {
+        "display_name": "SO-101 single-task teleoperation",
+        "episode_schema": {
+          "action": {
+            "dimension": 6,
+            "names": [
+              "main_shoulder_pan",
+              "main_shoulder_lift",
+              "main_elbow_flex",
+              "main_wrist_flex",
+              "main_wrist_roll",
+              "main_gripper"
+            ],
+            "units": "unknown-degree-like"
+          },
+          "cameras": [
+            "observation.images.laptop",
+            "observation.images.phone1"
+          ],
+          "fps": 30.0,
+          "state": {
+            "dimension": 6,
+            "names": [
+              "main_shoulder_pan",
+              "main_shoulder_lift",
+              "main_elbow_flex",
+              "main_wrist_flex",
+              "main_wrist_roll",
+              "main_gripper"
+            ],
+            "units": "unknown-degree-like"
+          },
+          "total_episodes": 10,
+          "total_frames": 10112
+        },
+        "fixture": null,
+        "format": {
+          "adapter": "lerobot-v2",
+          "codebase_version": "v2.1",
+          "implementation_status": "implemented"
+        },
+        "id": "nashmo-so101",
+        "kind": "dataset",
+        "known_limitations": [
+          "The dataset-to-robot relationship is alias-derived rather than an exact catalog identifier.",
+          "State/action values appear degree-like, but units, offsets, signs, and limits are unverified.",
+          "The first state-only spike deliberately excludes about 210 MB of optional camera video."
+        ],
+        "license": "apache-2.0",
+        "mixture": {
+          "compatibility_tier": "provisional-homogeneous",
+          "domain": "physical-tabletop-manipulation",
+          "embodiment": "so-arm101",
+          "schema_family": "lerobot-joint-position-6d"
+        },
+        "modalities": [
+          "sensor/rgb",
+          "sensor/proprioception",
+          "state-space/joint-position",
+          "action-space/joint-position",
+          "action-space/gripper-command",
+          "task/manipulation"
+        ],
+        "profile_wref": "DatasetProfile/huggingface/nashmo/so101",
+        "required_assessments": [
+          "source/listed",
+          "meta/info-present",
+          "meta/features-parse",
+          "meta/robot-type-present",
+          "license/present"
+        ],
+        "robot_evidence": {
+          "confidence": 0.9,
+          "match_method": "alias-map",
+          "notes": "alias-map: so101 -> so101",
+          "recorded_with_wref": "RecordedWith/huggingface/nashmo/so101",
+          "requires_user_confirmation": true,
+          "robot_wref": "wh:bencaunt/robot-models/Robot/the-robot-studio/so-arm101"
+        },
+        "schema_version": 1,
+        "source": {
+          "adapter": "huggingface-hub",
+          "implementation_status": "implemented",
+          "location_resolved_from_warmhub": true
+        },
+        "upstream_revision": "7e8ba026d3040061561c9fb15976f33a4bc1d275",
+        "warmhub": {
+          "attribution_url": "https://app.warmhub.ai/orgs/bencaunt/repos/robot-datasets",
+          "observed_pinned_wref": "Dataset/huggingface/nashmo/so101@v1",
+          "repo": "bencaunt/robot-datasets",
+          "wref": "Dataset/huggingface/nashmo/so101"
+        }
+      },
+      "path": "catalog/datasets/nashmo-so101.yaml"
+    },
     {
       "manifest": {
         "display_name": "SO-101 teleop cubes to bowl",
@@ -50,12 +146,12 @@
         "format": {
           "adapter": "lerobot-v2",
           "codebase_version": "v2.1",
-          "implementation_status": "planned"
+          "implementation_status": "implemented"
         },
         "id": "qb1t-so101-teleop-cubes",
         "kind": "dataset",
         "known_limitations": [
-          "Source and format adapters are contracts only in v0.1.",
+          "The pinned Hugging Face repository returned 401/repository-not-found during the 2026-07-27 spike.",
           "Dataset state and action units must be verified from actual frames before URDF animation.",
           "The dataset-to-robot relationship is alias-derived rather than an exact catalog identifier."
         ],
@@ -93,7 +189,7 @@
         "schema_version": 1,
         "source": {
           "adapter": "huggingface-hub",
-          "implementation_status": "planned",
+          "implementation_status": "implemented",
           "location_resolved_from_warmhub": true
         },
         "upstream_revision": "2f932198e8925e60f02ed86171f6929845651b92",
@@ -105,6 +201,41 @@
         }
       },
       "path": "catalog/datasets/qb1t-so101-teleop-cubes.yaml"
+    },
+    {
+      "manifest": {
+        "dataset": "nashmo-so101",
+        "display_name": "nashmo SO-101 features to SO-ARM101 URDF joints",
+        "id": "nashmo-so101-to-so-arm101",
+        "kind": "joint-mapping",
+        "known_limitations": [
+          "Name/order correspondence is plausible but does not establish numeric conversion semantics.",
+          "Provisional mappings are logged as evidence and can never enable Rerun animation."
+        ],
+        "mapping": {
+          "animate_in_rerun": false,
+          "dataset_units": "unknown-degree-like",
+          "entries": {
+            "main_elbow_flex": "3",
+            "main_gripper": "6",
+            "main_shoulder_lift": "2",
+            "main_shoulder_pan": "1",
+            "main_wrist_flex": "4",
+            "main_wrist_roll": "5"
+          },
+          "status": "provisional",
+          "urdf_units": "radians",
+          "validation_required": [
+            "verify dataset units from recorder calibration",
+            "confirm zero offsets and sign conventions",
+            "compare converted observed extrema with URDF joint limits",
+            "visually inspect known poses in Rerun"
+          ]
+        },
+        "robot": "so-arm101",
+        "schema_version": 1
+      },
+      "path": "catalog/mappings/nashmo-so101-to-so-arm101.yaml"
     },
     {
       "manifest": {
@@ -133,15 +264,16 @@
           "prediction_target": "next joint-state delta",
           "purpose": "validate the end-to-end data, training, checkpoint, device, and Rerun contracts"
         },
+        "joint_mapping": "nashmo-so101-to-so-arm101",
         "kind": "recipe",
         "known_limitations": [
           "This state-only baseline is a pipeline proof, not the final visual world model.",
-          "Source/format materialization and the trainer are the next implementation milestone.",
+          "URDF animation and joint-limit metrics remain disabled until the mapping is validated.",
           "Remote provisioning is intentionally absent until teardown tests pass."
         ],
         "mixture": {
           "datasets": [
-            "qb1t-so101-teleop-cubes"
+            "nashmo-so101"
           ],
           "missing_modality_policy": "reject-required",
           "normalization": "per-feature-training-split",
@@ -222,29 +354,9 @@
         },
         "display_name": "SO-ARM101",
         "id": "so-arm101",
-        "joint_mapping": {
-          "animate_in_rerun": false,
-          "dataset_units": "unknown",
-          "entries": {
-            "elbow_flex.pos": "3",
-            "gripper.pos": "6",
-            "shoulder_lift.pos": "2",
-            "shoulder_pan.pos": "1",
-            "wrist_flex.pos": "4",
-            "wrist_roll.pos": "5"
-          },
-          "status": "provisional",
-          "urdf_units": "radians",
-          "validation_required": [
-            "confirm dataset values and units from representative frames",
-            "confirm zero offsets and sign conventions",
-            "compare observed extrema with URDF joint limits",
-            "visually inspect a known pose in Rerun"
-          ]
-        },
         "kind": "robot",
         "known_limitations": [
-          "The upstream URDF uses numeric joint names while the dataset uses semantic feature names.",
+          "The upstream URDF uses numeric joint names; mappings belong to dataset-robot mapping manifests.",
           "The whole package root, including meshes, must be materialized for Rerun URDF import."
         ],
         "model_profile": {
@@ -265,7 +377,7 @@
         "schema_version": 1,
         "source": {
           "adapter": "github-sparse-checkout",
-          "implementation_status": "planned",
+          "implementation_status": "implemented",
           "location_resolved_from_warmhub": true
         },
         "warmhub": {

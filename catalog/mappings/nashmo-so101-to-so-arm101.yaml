@@ -1,0 +1,26 @@
+schema_version: 1
+kind: joint-mapping
+id: nashmo-so101-to-so-arm101
+display_name: nashmo SO-101 features to SO-ARM101 URDF joints
+dataset: nashmo-so101
+robot: so-arm101
+mapping:
+  status: provisional
+  animate_in_rerun: false
+  dataset_units: unknown-degree-like
+  urdf_units: radians
+  entries:
+    main_shoulder_pan: "1"
+    main_shoulder_lift: "2"
+    main_elbow_flex: "3"
+    main_wrist_flex: "4"
+    main_wrist_roll: "5"
+    main_gripper: "6"
+  validation_required:
+    - verify dataset units from recorder calibration
+    - confirm zero offsets and sign conventions
+    - compare converted observed extrema with URDF joint limits
+    - visually inspect known poses in Rerun
+known_limitations:
+  - Name/order correspondence is plausible but does not establish numeric conversion semantics.
+  - Provisional mappings are logged as evidence and can never enable Rerun animation.

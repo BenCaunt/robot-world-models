@@ -20,7 +20,7 @@ description:
   entrypoint: Simulation/SO101/so101_new_calib.urdf
 source:
   adapter: github-sparse-checkout
-  implementation_status: planned
+  implementation_status: implemented
   location_resolved_from_warmhub: true
 model_profile:
   dof: 6
@@ -35,24 +35,6 @@ required_assessments:
   - assets/meshes-present
   - physics/joint-limits-present
   - physics/inertia-plausible
-joint_mapping:
-  status: provisional
-  animate_in_rerun: false
-  dataset_units: unknown
-  urdf_units: radians
-  entries:
-    shoulder_pan.pos: "1"
-    shoulder_lift.pos: "2"
-    elbow_flex.pos: "3"
-    wrist_flex.pos: "4"
-    wrist_roll.pos: "5"
-    gripper.pos: "6"
-  validation_required:
-    - confirm dataset values and units from representative frames
-    - confirm zero offsets and sign conventions
-    - compare observed extrema with URDF joint limits
-    - visually inspect a known pose in Rerun
 known_limitations:
-  - The upstream URDF uses numeric joint names while the dataset uses semantic feature names.
+  - The upstream URDF uses numeric joint names; mappings belong to dataset-robot mapping manifests.
   - The whole package root, including meshes, must be materialized for Rerun URDF import.
-

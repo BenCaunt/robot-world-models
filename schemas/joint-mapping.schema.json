@@ -1,0 +1,103 @@
+{
+  "$defs": {
+    "JointMapping": {
+      "additionalProperties": false,
+      "properties": {
+        "animate_in_rerun": {
+          "title": "Animate In Rerun",
+          "type": "boolean"
+        },
+        "dataset_units": {
+          "title": "Dataset Units",
+          "type": "string"
+        },
+        "entries": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "title": "Entries",
+          "type": "object"
+        },
+        "status": {
+          "enum": [
+            "provisional",
+            "validated"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "urdf_units": {
+          "title": "Urdf Units",
+          "type": "string"
+        },
+        "validation_required": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Validation Required",
+          "type": "array"
+        }
+      },
+      "required": [
+        "status",
+        "animate_in_rerun",
+        "dataset_units",
+        "urdf_units",
+        "entries",
+        "validation_required"
+      ],
+      "title": "JointMapping",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "dataset": {
+      "title": "Dataset",
+      "type": "string"
+    },
+    "display_name": {
+      "title": "Display Name",
+      "type": "string"
+    },
+    "id": {
+      "title": "Id",
+      "type": "string"
+    },
+    "kind": {
+      "const": "joint-mapping",
+      "title": "Kind",
+      "type": "string"
+    },
+    "known_limitations": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Known Limitations",
+      "type": "array"
+    },
+    "mapping": {
+      "$ref": "#/$defs/JointMapping"
+    },
+    "robot": {
+      "title": "Robot",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": 1,
+      "title": "Schema Version",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "schema_version",
+    "kind",
+    "id",
+    "display_name",
+    "dataset",
+    "robot",
+    "mapping"
+  ],
+  "title": "JointMappingManifest",
+  "type": "object"
+}

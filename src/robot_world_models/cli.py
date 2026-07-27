@@ -97,6 +97,40 @@ def device_command() -> None:
     _emit(device_report())
 
 
+@app.command("train")
+def train_command(
+    recipe: Annotated[str, typer.Argument(help="Recipe manifest ID.")],
+    run_dir: Annotated[Path, typer.Option(help="Artifact and receipt directory.")],
+    max_steps: Annotated[
+        int | None,
+        typer.Option(min=1, help="Optional bounded override for debugging."),
+    ] = None,
+    smoke_test_steps: Annotated[
+        int | None,
+        typer.Option(min=1, help="Optional smoke-test override."),
+    ] = None,
+    max_episodes: Annotated[
+        int | None,
+        typer.Option(min=3, help="Optional episode-subset override."),
+    ] = None,
+) -> None:
+    """Run a local, receipt-producing training proof from a reviewed recipe."""
+    from robot_world_models.training import run_recipe
+
+    try:
+        result = run_recipe(
+            recipe_id=recipe,
+            run_dir=run_dir,
+            max_steps=max_steps,
+            smoke_test_steps=smoke_test_steps,
+            max_episodes=max_episodes,
+        )
+    except Exception as error:
+        typer.echo(f"{type(error).__name__}: {error}", err=True)
+        raise typer.Exit(code=1) from error
+    _emit(result)
+
+
 @runpod_app.command("plan")
 def runpod_plan_command(
     max_hourly_usd: Annotated[float, typer.Option(min=0.01)],

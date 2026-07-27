@@ -9,7 +9,7 @@ intent:
 mixture:
   type: homogeneous
   datasets:
-    - qb1t-so101-teleop-cubes
+    - nashmo-so101
   robot: so-arm101
   sampling: episode-uniform
   missing_modality_policy: reject-required
@@ -19,6 +19,7 @@ mixture:
     train_fraction: 0.8
     validation_fraction: 0.1
     test_fraction: 0.1
+joint_mapping: nashmo-so101-to-so-arm101
 modalities:
   required:
     - sensor/proprioception
@@ -75,6 +76,5 @@ remote_compute:
   explicit_approval_required: true
 known_limitations:
   - This state-only baseline is a pipeline proof, not the final visual world model.
-  - Source/format materialization and the trainer are the next implementation milestone.
+  - URDF animation and joint-limit metrics remain disabled until the mapping is validated.
   - Remote provisioning is intentionally absent until teardown tests pass.
-

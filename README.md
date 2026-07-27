@@ -16,15 +16,16 @@ hard-coded.
 
 ## Current milestone
 
-This first scaffold provides:
+The first local spike is executable and provides:
 
 - the workflow and contribution contract in [`SPEC.md`](SPEC.md);
 - agent instructions in [`AGENTS.md`](AGENTS.md);
 - the reviewed upstream interfaces in [`docs/references.md`](docs/references.md);
-- validated dataset, robot, and recipe manifests;
+- validated dataset, robot, dataset-to-robot mapping, and recipe manifests;
 - a generated machine-readable catalog;
 - live, Arc-aware discovery across both WarmHub registries;
-- an SO-101 state-dynamics proof-of-concept recipe;
+- reusable Hugging Face, LeRobot v2.1, and GitHub description adapters;
+- an SO-101 state-dynamics proof-of-concept trainer for MPS, CUDA, and CPU;
 - mandatory Rerun evaluation output, including a WarmHub-resolved URDF when joint semantics permit;
 - a cost-bounded RunPod planning contract and a separate deployment prompt.
 
@@ -43,17 +44,13 @@ uv run rwm warmhub discover "SO-101"
 uv run pytest
 ```
 
-For the small PyTorch proof of concept:
-
-```bash
-uv sync --extra train
-uv run rwm device
-```
-
-For LeRobot dataset support:
+Run the reviewed SO-101 proof of concept:
 
 ```bash
 uv sync --extra train --extra lerobot
+uv run rwm device
+uv run rwm train so101-state-dynamics-poc --run-dir runs/so101-demo
+uv run rerun runs/so101-demo/evaluation.rrd
 ```
 
 Start an agent with [`prompts/create-world-model.md`](prompts/create-world-model.md). The agent
@@ -69,11 +66,25 @@ A new dataset normally contributes:
 3. a contract test;
 4. code only when the source access method or storage format is genuinely new.
 
+A dataset-specific feature-to-URDF mapping belongs in `catalog/mappings/`, not on the robot
+manifest. Provisional mappings can preserve useful evidence, but cannot enable animation or
+joint-limit claims.
+
 Run `uv run rwm catalog build` after adding a manifest. CI rejects invalid manifests and a stale
 `catalog/catalog.json`.
 
+## First spike result
+
+The 2026-07-27 MPS spike used the WarmHub-resolved `nashmo/so101` dataset: 10 episodes, 8/1/1
+episode split, 8,089 training transitions, a 100-step smoke test, and 2,000 training steps. It
+completed training in about 3 seconds and reached held-out one-step MSE 0.0719 versus 0.3553 for the
+persistence baseline. Open-loop MSE rose to 0.733 at ten steps.
+
+See [`docs/spikes/so101-state-dynamics-2026-07-27.md`](docs/spikes/so101-state-dynamics-2026-07-27.md)
+for the full result, failures, and next experiment.
+
 ## Status
 
-The scaffold and contracts are executable. Dataset download, complete LeRobot materialization,
-training, and paid RunPod provisioning are the next implementation milestones; the SO-101 recipe
-makes their expected boundaries explicit.
+WarmHub resolution, bounded state-data materialization, local training, checkpointing, baseline
+evaluation, and Rerun output are implemented. Visual training, validated joint animation, and paid
+RunPod provisioning remain future milestones. The RunPod CLI remains intentionally plan-only.

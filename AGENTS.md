@@ -46,6 +46,8 @@ Do not skip directly from a robot name to architecture or paid compute.
   `matchMethod`, `confidence`, and notes.
 - Never emit Pair in a new contribution. Legacy Pair may be read only for historical compatibility.
 - If WarmHub lacks a fact, label a local mapping provisional and make the registry gap visible.
+- Before approving a dataset, preflight the exact upstream revision and required files. A WarmHub
+  record is provenance evidence, not a guarantee that payload bytes remain public.
 - Do not write to a WarmHub repo unless the user explicitly expands the task to ingestion.
 
 ## Contribution rules
@@ -59,6 +61,9 @@ A dataset normally adds a manifest, fixture, and contract test. Search for an ex
 
 Add code only when none applies. Keep adapters independent from recipes. A recipe composes
 capabilities; it does not own download or extraction logic.
+
+Feature-name, unit, offset, and sign mappings belong to a dataset-to-robot manifest under
+`catalog/mappings/`. Never put a dataset-specific feature map on a global robot manifest.
 
 After manifest changes:
 
@@ -77,10 +82,21 @@ Do not hand-edit `catalog/catalog.json` or files under `schemas/`.
 - Preserve dataset identity in heterogeneous batches.
 - Seed Python, NumPy, and PyTorch.
 - Start with an overfit smoke test and a bounded subset.
+- Download only modalities and episodes required by the approved proof; state-only runs must not
+  pull videos.
 - Select devices in order requested by the recipe; support `mps`, `cuda`, then `cpu`.
 - Record exact config, package lock hash, git commit, WarmHub snapshot, dataset fingerprint, device,
   seed, and checkpoint hash.
 - Compare against a naive baseline.
+- Skip and explain physical metrics whose units or robot mapping are not validated.
+
+The current homogeneous reference command is:
+
+```bash
+uv sync --extra train --extra lerobot
+uv run rwm train so101-state-dynamics-poc --run-dir runs/<run-id>
+uv run rerun rrd verify runs/<run-id>/evaluation.rrd
+```
 
 ## Rerun rules
 
@@ -123,4 +139,3 @@ uv run rwm catalog build --check
 ```
 
 Report skipped live, GPU, dataset-download, or paid-compute checks explicitly.
-

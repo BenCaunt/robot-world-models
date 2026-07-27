@@ -1,6 +1,6 @@
 # Robot World Models Specification
 
-Status: draft v0.1 — executable scaffold, ready for iterative review
+Status: draft v0.2 — first bounded SO-101 local spike implemented
 
 ## 1. Purpose
 
@@ -75,6 +75,8 @@ The agent queries both registries:
 6. Inspect `DatasetProfile`, `CatalogProfile`, licenses, source URLs, and `Assessment` records.
 7. Normalize trailing `@vN` pins before client-side identity comparison while retaining the observed
    pinned wrefs in the receipt.
+8. Preflight the exact upstream revision, access/gating state, required metadata, and payload paths.
+   A registry record proves identity and evidence, not continued public byte availability.
 
 New contributions must emit Arc or Bond relationships according to the live registry model. Pair is
 legacy read compatibility only.
@@ -159,6 +161,12 @@ The canonical episode contract contains observations, actions, timestamps, episo
 dataset identity, robot identity, task metadata, and modality masks. Conversion must be resumable
 and content-addressed. Raw files remain immutable.
 
+Source adapters accept a format-adapter-produced list of approved payload paths. This keeps
+transport independent from schema while ensuring a state-only spike does not download camera video
+or unselected episodes. Storage versions are explicit capabilities: an installed library rejecting
+an older dataset does not require an upstream conversion when a bounded, tested adapter can read
+the immutable format directly.
+
 For a new dataset, the normal contribution is a manifest, fixture, and contract test. A new source
 adapter is justified only by a new transport or authentication method; a new format adapter is
 justified only by a new storage/schema family.
@@ -205,7 +213,7 @@ the smoke test does not pass.
 
 Evaluation is not a terminal scalar. Every run writes `evaluation.rrd` with:
 
-- selected observation images;
+- selected observation images when RGB is part of the recipe;
 - actual and predicted state/action-aligned trajectories;
 - one-step and rollout errors;
 - per-joint and aggregate metrics;
@@ -228,7 +236,7 @@ Minimum state-model metrics:
 - one-step MSE and MAE;
 - per-joint error;
 - open-loop rollout error by horizon;
-- stability or limit-violation rate;
+- stability or limit-violation rate only when units and robot mapping are validated;
 - naive persistence baseline;
 - metrics per dataset for heterogeneous mixtures.
 
@@ -326,8 +334,21 @@ One file under `catalog/robots/` identifies:
 - pinned upstream description revision;
 - source adapter;
 - description format;
-- state/action-to-joint mapping status;
 - licensing and QC requirements.
+
+### Dataset-to-robot mapping manifest
+
+One file under `catalog/mappings/` binds one dataset manifest to one robot manifest and records:
+
+- semantic feature-to-joint correspondence;
+- dataset and robot units;
+- mapping validation status;
+- required checks for order, offsets, signs, and limits;
+- whether Rerun animation is permitted.
+
+Mappings are not robot-global because datasets for the same embodiment can use different feature
+names and numeric conventions. A provisional mapping can preserve evidence, but schema validation
+prevents it from enabling animation.
 
 ### Recipe manifest
 
@@ -336,6 +357,7 @@ One file under `catalog/recipes/` binds:
 - model intent;
 - homogeneous/heterogeneous policy;
 - datasets and robot;
+- optional dataset-to-robot mapping;
 - canonical modality contract;
 - architecture and training budget;
 - supported local devices;
@@ -347,7 +369,7 @@ One file under `catalog/recipes/` binds:
 `catalog/catalog.json` is deterministic and generated from validated manifests. It is the first
 search surface for agents and CI. Hand editing is prohibited.
 
-## 5. Initial SO-101 fixture
+## 5. Initial SO-101 spike
 
 Curated from live WarmHub reads on 2026-07-27:
 
@@ -355,34 +377,48 @@ Curated from live WarmHub reads on 2026-07-27:
 - Description:
   `Description/github/therobotstudio/so-arm100/simulation/so101/so101-new-calib-urdf`
 - Description format/license: URDF, Apache-2.0
-- Dataset: `bencaunt/robot-datasets/Dataset/huggingface/qb1t/so101-teleop-cubes`
+- Dataset: `bencaunt/robot-datasets/Dataset/huggingface/nashmo/so101`
 - Dataset license: Apache-2.0
-- Dataset summary: 50 episodes, about 38.8k frames at 30 FPS, wrist and external RGB cameras,
+- Dataset summary: 10 episodes, 10,112 frames at 30 FPS, laptop and phone RGB cameras,
   six-dimensional joint state, and six-dimensional joint action
 - Registry modalities: RGB, proprioception, joint-position state, joint-position action,
   gripper command, manipulation
 - Dataset QC: source listed, metadata present, feature schema parsed, robot type present, and license
   present
-- Robot-link evidence: alias-derived `so101_follower -> so101`, confidence 0.9
+- Robot-link evidence: alias-derived `so101 -> so101`, confidence 0.9
 
 Because the robot link is high-confidence alias evidence rather than an exact catalog identifier,
 the first plan must show it to the user for confirmation. The URDF joint names are numeric while the
 dataset uses semantic feature names; the initial mapping is provisional until values, units, offsets,
 and limits are checked against real frames.
 
+The originally selected `qb1t/so101-teleop-cubes` record remains in the catalog as useful evidence,
+but its pinned Hugging Face source returned 401/repository-not-found during materialization. The
+pipeline therefore returned to WarmHub discovery and selected `nashmo/so101`; it did not silently
+substitute an unregistered source.
+
+The first complete MPS run used an 8/1/1 episode split, 8,089 training transitions, a 100-step
+overfit smoke test, and 2,000 training steps. Training took about 3 seconds. Held-out one-step MSE was
+0.0719 versus 0.3553 for persistence; open-loop MSE grew from 0.0726 at one step to 0.733 at ten
+steps. Metrics are in the dataset's unverified raw units. Rerun verified the 300-frame
+actual/predicted recording and static WarmHub-resolved URDF without animating the provisional map.
+
 ## 6. Completion criteria
 
-The first end-to-end milestone is complete when:
+The local milestone is complete:
 
 - live WarmHub discovery reproduces the SO-101 evidence;
 - a bounded LeRobot slice downloads and validates through reusable adapters;
 - the state-dynamics baseline trains on MPS or CUDA;
 - evaluation beats a persistence baseline on held-out episodes;
-- Rerun opens images, metrics, actual/predicted trajectories, and the SO-101 URDF;
+- Rerun verifies metrics, actual/predicted trajectories, and the SO-101 URDF;
+- the implementation leaves a reusable contribution path.
+
+The remote milestone remains open until:
+
 - the same locked recipe runs on one approved RunPod GPU;
 - weights and evaluation artifacts return locally;
-- the Pod is verified terminated;
-- the implementation leaves a reusable contribution path.
+- the Pod and any billable storage are verified terminated.
 
 ## 7. Explicit non-goals for v0.1
 
@@ -392,4 +428,3 @@ The first end-to-end milestone is complete when:
 - autonomous paid infrastructure creation;
 - storing dataset payloads or checkpoints in Git;
 - writing inferred facts back to WarmHub without a separately reviewed ingestion path.
-

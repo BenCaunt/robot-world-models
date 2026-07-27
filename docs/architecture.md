@@ -8,7 +8,7 @@ flowchart LR
     RM["bencaunt/robot-models"] --> D
     RD["bencaunt/robot-datasets"] --> D
     D --> P["Approved data plan"]
-    P --> C["Dataset and robot manifests"]
+    P --> C["Dataset, robot, and mapping manifests"]
     C --> S["Source adapters"]
     S --> F["Format adapters"]
     F --> E["Canonical episodes"]
@@ -28,6 +28,7 @@ flowchart LR
 | --- | --- | --- |
 | WarmHub discovery | identity, relationships, evidence, provenance, URLs | bulk payload bytes |
 | Dataset manifest | declarative mapping and compatibility | transport implementation |
+| Dataset-robot mapping | feature/joint names, units, offsets, signs, validation status | global robot identity |
 | Source adapter | download, authentication, resume, checksum | dataset schema |
 | Format adapter | source layout to canonical episodes | recipe-specific training |
 | Recipe | mixture, modalities, model and evaluation contract | one-off extraction logic |
@@ -40,12 +41,15 @@ flowchart LR
 robot_world_models.contracts  manifest types and validation
 robot_world_models.catalog    deterministic catalog discovery and generation
 robot_world_models.warmhub    read-only typed wrapper around the wh CLI
+robot_world_models.adapters   versioned source and format adapters
 robot_world_models.devices    MPS/CUDA/CPU selection
 robot_world_models.runpod     plan and policy only in v0.1
 robot_world_models.models     small reference models
 robot_world_models.eval       mandatory Rerun receipts
+robot_world_models.training   receipt-producing local recipe runner
 ```
 
-Adapters will be introduced behind protocols after the first bounded SO-101 data slice proves their
-required interface.
-
+The first bounded SO-101 spike established two reusable boundaries: source adapters selectively
+materialize immutable upstream paths, while format adapters own storage-version parsing and
+canonical episode validation. LeRobot library compatibility is not used as a proxy for dataset
+storage compatibility.

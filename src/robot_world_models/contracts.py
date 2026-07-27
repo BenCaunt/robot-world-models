@@ -160,7 +160,13 @@ class RobotManifest(ManifestBase):
     source: AdapterRef
     model_profile: RobotModelProfile
     required_assessments: list[str]
-    joint_mapping: JointMapping
+
+
+class JointMappingManifest(ManifestBase):
+    kind: Literal["joint-mapping"]
+    dataset: str
+    robot: str
+    mapping: JointMapping
 
 
 class RecipeIntent(ContractModel):
@@ -248,6 +254,7 @@ class RecipeManifest(ManifestBase):
     kind: Literal["recipe"]
     intent: RecipeIntent
     mixture: RecipeMixture
+    joint_mapping: str | None = None
     modalities: RecipeModalities
     model: ModelContract
     training: TrainingContract
@@ -255,6 +262,8 @@ class RecipeManifest(ManifestBase):
     remote_compute: RemoteComputeContract
 
 
-Manifest = Annotated[DatasetManifest | RobotManifest | RecipeManifest, Field(discriminator="kind")]
+Manifest = Annotated[
+    DatasetManifest | RobotManifest | JointMappingManifest | RecipeManifest,
+    Field(discriminator="kind"),
+]
 MANIFEST_ADAPTER = TypeAdapter(Manifest)
-

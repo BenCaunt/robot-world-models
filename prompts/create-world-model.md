@@ -15,8 +15,10 @@ large download before I approve the data plan.
 4. Build a compatibility table of candidate datasets. Separate registry facts, upstream facts,
    inferences, and unknowns.
 5. Recommend the smallest experiment that can test the idea. Show rejected datasets and why.
-6. After I approve the data plan, reuse existing source and format adapters. If an adapter is
-   missing, follow `prompts/add-dataset.md` and leave a reusable contribution.
+6. Before download, preflight the exact upstream revision and required files. Catalog presence is
+   not proof that payload bytes are still public. After I approve the data plan, reuse existing
+   source and format adapters. If an adapter is missing, follow `prompts/add-dataset.md` and leave a
+   reusable contribution.
 7. Train a bounded proof of concept locally with uv on MPS, CUDA, or CPU. Start with an overfit smoke
    test and compare against a naive baseline.
 8. Evaluate with Rerun. Produce an `.rrd` containing observations, predictions, metrics,
@@ -26,5 +28,8 @@ large download before I approve the data plan.
 10. End with reproducible commands, artifact paths, caveats, and the modular contribution that future
     agents can reuse.
 
-Never ask me to paste an API key into chat. Never treat possession of a key as approval to spend.
+For an implemented homogeneous recipe, prefer `uv run rwm train <recipe-id> --run-dir
+runs/<run-id>` over recipe-specific scripts. Treat feature-to-URDF semantics as a dataset-to-robot
+mapping capability and skip physical metrics while it remains provisional.
 
+Never ask me to paste an API key into chat. Never treat possession of a key as approval to spend.

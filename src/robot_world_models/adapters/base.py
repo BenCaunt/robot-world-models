@@ -13,6 +13,7 @@ class SourceReceipt:
     destination: Path
     content_sha256: str
     bytes_written: int
+    files_written: int
     resumed: bool
 
 

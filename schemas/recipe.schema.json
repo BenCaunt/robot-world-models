@@ -412,6 +412,18 @@
     "intent": {
       "$ref": "#/$defs/RecipeIntent"
     },
+    "joint_mapping": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Joint Mapping"
+    },
     "kind": {
       "const": "recipe",
       "title": "Kind",

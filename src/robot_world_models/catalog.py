@@ -10,13 +10,14 @@ import yaml
 from robot_world_models.contracts import (
     MANIFEST_ADAPTER,
     DatasetManifest,
+    JointMappingManifest,
     Manifest,
     RecipeManifest,
     RobotManifest,
 )
 
 CATALOG_SCHEMA_VERSION = "robot-world-models.catalog.v1"
-MANIFEST_DIRECTORIES = ("datasets", "robots", "recipes")
+MANIFEST_DIRECTORIES = ("datasets", "robots", "mappings", "recipes")
 
 
 class CatalogError(ValueError):
@@ -61,6 +62,16 @@ def validate_repository(root: Path | None = None) -> list[tuple[Path, Manifest]]
         manifest.id for _, manifest in loaded if isinstance(manifest, DatasetManifest)
     }
     robot_ids = {manifest.id for _, manifest in loaded if isinstance(manifest, RobotManifest)}
+    mapping_ids = {
+        manifest.id for _, manifest in loaded if isinstance(manifest, JointMappingManifest)
+    }
+    for path, manifest in loaded:
+        if not isinstance(manifest, JointMappingManifest):
+            continue
+        if manifest.dataset not in dataset_ids:
+            raise CatalogError(f"{path}: unknown dataset {manifest.dataset}")
+        if manifest.robot not in robot_ids:
+            raise CatalogError(f"{path}: unknown robot {manifest.robot}")
     for path, manifest in loaded:
         if not isinstance(manifest, RecipeManifest):
             continue
@@ -69,6 +80,19 @@ def validate_repository(root: Path | None = None) -> list[tuple[Path, Manifest]]
             raise CatalogError(f"{path}: unknown datasets {missing_datasets}")
         if manifest.mixture.robot not in robot_ids:
             raise CatalogError(f"{path}: unknown robot {manifest.mixture.robot}")
+        if manifest.joint_mapping is not None:
+            if manifest.joint_mapping not in mapping_ids:
+                raise CatalogError(f"{path}: unknown joint mapping {manifest.joint_mapping}")
+            mapping = next(
+                item
+                for _, item in loaded
+                if isinstance(item, JointMappingManifest)
+                and item.id == manifest.joint_mapping
+            )
+            if mapping.dataset not in manifest.mixture.datasets:
+                raise CatalogError(f"{path}: joint mapping dataset is not in the recipe mixture")
+            if mapping.robot != manifest.mixture.robot:
+                raise CatalogError(f"{path}: joint mapping robot does not match the recipe robot")
 
     return loaded
 
@@ -118,6 +142,9 @@ def rendered_schemas() -> dict[str, str]:
     return {
         "dataset.schema.json": _canonical_json(DatasetManifest.model_json_schema()),
         "robot.schema.json": _canonical_json(RobotManifest.model_json_schema()),
+        "joint-mapping.schema.json": _canonical_json(
+            JointMappingManifest.model_json_schema()
+        ),
         "recipe.schema.json": _canonical_json(RecipeManifest.model_json_schema()),
     }
 
@@ -159,3 +186,14 @@ def catalog_summary(root: Path | None = None) -> list[dict[str, str]]:
         }
         for path, manifest in loaded
     ]
+
+
+def manifest_by_id(identifier: str, root: Path | None = None) -> Manifest:
+    matches = [
+        manifest
+        for _, manifest in validate_repository(root)
+        if manifest.id == identifier
+    ]
+    if not matches:
+        raise CatalogError(f"unknown manifest id: {identifier}")
+    return matches[0]

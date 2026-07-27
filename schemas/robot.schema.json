@@ -28,55 +28,6 @@
       "title": "AdapterRef",
       "type": "object"
     },
-    "JointMapping": {
-      "additionalProperties": false,
-      "properties": {
-        "animate_in_rerun": {
-          "title": "Animate In Rerun",
-          "type": "boolean"
-        },
-        "dataset_units": {
-          "title": "Dataset Units",
-          "type": "string"
-        },
-        "entries": {
-          "additionalProperties": {
-            "type": "string"
-          },
-          "title": "Entries",
-          "type": "object"
-        },
-        "status": {
-          "enum": [
-            "provisional",
-            "validated"
-          ],
-          "title": "Status",
-          "type": "string"
-        },
-        "urdf_units": {
-          "title": "Urdf Units",
-          "type": "string"
-        },
-        "validation_required": {
-          "items": {
-            "type": "string"
-          },
-          "title": "Validation Required",
-          "type": "array"
-        }
-      },
-      "required": [
-        "status",
-        "animate_in_rerun",
-        "dataset_units",
-        "urdf_units",
-        "entries",
-        "validation_required"
-      ],
-      "title": "JointMapping",
-      "type": "object"
-    },
     "RobotDescription": {
       "additionalProperties": false,
       "properties": {
@@ -227,9 +178,6 @@
       "title": "Id",
       "type": "string"
     },
-    "joint_mapping": {
-      "$ref": "#/$defs/JointMapping"
-    },
     "kind": {
       "const": "robot",
       "title": "Kind",
@@ -273,8 +221,7 @@
     "description",
     "source",
     "model_profile",
-    "required_assessments",
-    "joint_mapping"
+    "required_assessments"
   ],
   "title": "RobotManifest",
   "type": "object"
